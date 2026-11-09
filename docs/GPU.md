@@ -49,7 +49,15 @@ The pipeline uses one GPU. From fastest to slowest (us-east-1 on-demand $/h):
 | RTX PRO 6000 Server 96 GB (Blackwell) | `g7e.2xlarge` (3.36), `g7e.4xlarge` (4.00), `g7e.8xlarge` (5.27) |
 | L40S 48 GB | `g6e.xlarge` (1.86), `g6e.2xlarge` (2.24), `g6e.4xlarge` (1.98), `g6e.8xlarge` (4.53), `g6e.16xlarge` (7.58) |
 | RTX PRO 4500 (Blackwell) | `g7.2xlarge` (2.52), `g7.8xlarge` (4.09) |
-| A10G 24 GB, L4 24 GB, T4, V100 | `g5`, `g6`, `g4dn`, `p3`: too slow or too little memory for this model |
+| L4 24 GB | `g6.xlarge` (0.80) |
+| A10G 24 GB | `g5.xlarge` (1.01) |
+| T4 16 GB, V100 | `g4dn`, `p3`: no BF16, which the model's mixed precision uses |
+
+The pipeline uses about 11 GB of GPU memory (Coiled metrics, L40S, 12-step run), so
+every GPU with 16 GB or more fits. L4 and A10G have about 1/3 and 1/5 of the L40S's BF16
+compute; a 12-step forecast is estimated at 2-3 min on them (not measured), which still
+fits the 5-min cycle but adds 1.5-2 min of latency. The same L40S on a smaller instance
+(`g6e.4xlarge`, $1.98/h) costs 56% less than `g6e.8xlarge` at the same speed.
 
 **Capacity on 2026-11-09 (us-east-1):** capacity changes from minute to minute.
 
