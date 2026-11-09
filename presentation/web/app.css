@@ -713,5 +713,5 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .al-link img { width: 24px; height: 24px; }
 .facts ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; list-style: circle; }
 
-/* breathing room between the nowcasting bullets and WHY IT MATTERS */
-.panels .panel .facts + .label { margin-top: 14px; }
+/* breathing room above the WHY NOWCASTING and WHY IT MATTERS labels */
+.panels [data-panel="definition"] .label { margin-top: 14px; }
