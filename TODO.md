@@ -5,21 +5,17 @@ delete them when done.
 
 ## To decide
 
-- [ ] Clean IR colour table (`CLEAN_IR_TABLE` in `scripts/stormscope_us_pipeline.py`): grey from +40 °C to −30 °C, then light blue −30 / blue −40 / green −50 / yellow −60 / red −70 / dark red −80 / white −90 °C. OK, or name a specific one, e.g. NOAA/CIMSS "Rainbow IR" or the AVN enhancement? Judge it on a real run.
-- [ ] True colour recipe: is CIMSS natural true colour (synthetic green 0.45·C02 + 0.10·C03 + 0.45·C01, gamma 2.2) OK? Judge it on a real run.
-- [ ] Booth copy on panels 03 and 05 (`presentation/web/index.html`): the GPU model ("NVIDIA GPU", was "H200") and the data-flow stage latencies (TBD until measured).
-- [ ] Cadence for a new forecast: every 5 min (each time new GOES-19 CONUS data lands) or every 10 min (current)? See Candidates in `docs/END2END_NEARREALTIME_PERFORMANCE.md`.
-
-## To fix / provide
-
-- [ ] Vercel projects and domains for the hosted presentation and the mobile viewer: replace `viewer_url` (`TODO-viewer-url`) in `presentation/config.json` and the links in `README.md`. Both Vercel proxies are pinned to `iad1`; move them if the tiles service is not in us-east-1.
-- [ ] Read-only Arraylake token for the hosted presentation (Vercel env).
-- [ ] GPU host to run the pipeline (CUDA, NVIDIA Container Toolkit, NGC login if needed). Pick the instance type in us-east-1 (B200 = `p6-b200.48xlarge`, 8 GPUs only, ~$114/h on-demand; 1x H100 `p5.4xlarge` ~$6.88/h) and check the EC2 GPU quota / Capacity Block for the booth days.
-- [ ] `ARRAYLAKE_API_TOKEN` with write access to `nvidia/sc26-chicago-stormscope_us-booth`.
-- [ ] First GPU run: `docker compose up --build` has not been built or run yet (the Mac cannot build the CUDA image). Check the image build, the first model load, and `--region`. Then copy the printed `timing:` line into the baseline of `docs/END2END_NEARREALTIME_PERFORMANCE.md` and `run_phases_s` in `presentation/config.json` (currently estimates: ic 60 s, step 5 s, commit 6 s). Then drop the `[TO BE VERIFIED]` marker after the step time on panel 03 of `presentation/web/index.html`.
+- [ ] Clean IR colour table (`CLEAN_IR_TABLE` in `scripts/stormscope_us_pipeline.py`): grey from +40 °C to −30 °C, then light blue −30 / blue −40 / green −50 / yellow −60 / red −70 / dark red −80 / white −90 °C. OK, or name a specific one, e.g. NOAA/CIMSS "Rainbow IR" or the AVN enhancement? Judge it on a real run; to discuss with colleagues.
+- [ ] True colour recipe: is CIMSS natural true colour (synthetic green 0.45·C02 + 0.10·C03 + 0.45·C01, gamma 2.2) OK? Judge it on a real run; to discuss with colleagues.
 
 ## Done
 
+- [x] Vercel projects and domains (created by Earthmover colleagues): hosted presentation `nvidia-sc26-chicago.earthmover.io` (project `sc26-chicago-stormscope-us-booth`), mobile viewer `nvidia-sc26-chicago-viewer.earthmover.io` (project `sc26-chicago-stormscope-us-booth-site`). `viewer_url` set in `presentation/config.json`; both Vercel proxies pinned to `iad1`, next to the us-east-1 tiles service.
+- [x] Read-only Arraylake token for the hosted presentation sent to the colleagues setting up Vercel (env `ARRAYLAKE_API_TOKEN`).
+- [x] GPU host: 1x NVIDIA L40S (`g6e.xlarge`, us-east-1, via Coiled; see `docs/GPU.md`).
+- [x] First GPU run: 46–56 s per 12-step run (fetch ~6 s, ~4 s per step, commit ~1 s); in `run_phases_s`, panel 03 and stage 5 of `docs/END2END_NEARREALTIME_PERFORMANCE.md`.
+- [x] Cadence: a new forecast every 5 min (`run_interval_min: 5`).
+- [x] Booth copy on panels 03 and 05: "NVIDIA L40S GPU · ~4 s per 10-minute step", inference + ingest "<1 min".
 - [x] Arraylake tiles service enabled (`tiles-dd7cd36ec0562874.compute.arraylake.app`), URLs set in `presentation/config.json`, `presentation/api/tiles.js`, `site/index.html`, `site/api/tiles.js`. Real tiles served (2026-11-09).
 - [x] SQL service enabled; `sql.host` = `sql-4ae7e8fe159e81b6.compute.arraylake.app` (port 5432 reachable; first query with a token still to be tried).
 - [x] GitHub repo `earthmover-support/sc26-chicago-stormscope_us-booth` exists and matches the links on the booth page and viewer.

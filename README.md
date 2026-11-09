@@ -8,8 +8,8 @@ pipeline goes offline after the event.
 
 - Earth2Studio example: https://nvidia.github.io/earth2studio/main/examples/04_nowcasting/03_stormscope_goes_example/
 - Arraylake repo: https://app.earthmover.io/nvidia/sc26-chicago-stormscope_us-booth
-- Hosted presentation: https://nvidia-sc26-chicago.earthmover.io/ (proposed, not live yet; see [TODO.md](TODO.md))
-- Mobile viewer: https://nvidia-sc26-chicago-viewer.earthmover.io/ (proposed, not live yet)
+- Hosted presentation: https://nvidia-sc26-chicago.earthmover.io/
+- Mobile viewer: https://nvidia-sc26-chicago-viewer.earthmover.io/
 
 [`scripts/stormscope_us_pipeline.py`](scripts/stormscope_us_pipeline.py) runs
 `StormScopeGOES` (`3km_10min_flash`, earth2studio 0.20.0) end to end: find the newest
@@ -22,14 +22,14 @@ minutes behind real time. No MRMS radar. See [Pipeline script](#pipeline-script)
 
 ## Deployments
 
-| | Runs as | Live SQL | Audience | URL (proposed) |
+| | Runs as | Live SQL | Audience | URL |
 |---|---|---|---|---|
 | **Booth presentation** ([`presentation/`](presentation/)) | `uv run presentation/server.py` on the booth machine, full screen on the TV | editable | SC26 visitors | `http://localhost:8000` on the booth machine |
 | **Hosted presentation** ([`presentation/`](presentation/)) | Vercel project `sc26-chicago-stormscope-us-booth`, root directory `presentation` | fixed: the venue queries only, cached per init | internal sharing, unlisted URL | `nvidia-sc26-chicago.earthmover.io` |
 | **Mobile site** ([`site/`](site/)) | Vercel project `sc26-chicago-stormscope-us-booth-site`, root directory `site`, static | none | phones, via the booth QR code | `nvidia-sc26-chicago-viewer.earthmover.io` |
 
-The domains follow the GTC Berlin pattern and are not set up yet. The Vercel project
-names use hyphens only, so the `*.vercel.app` fallback domains are not truncated.
+The domains follow the GTC Berlin pattern. The Vercel project names use hyphens only, so
+the `*.vercel.app` fallback domains are not truncated.
 
 Both presentation deployments serve the same `presentation/web/` page and the same logic in
 `presentation/booth.py`. The difference is the `sql_editable` flag in `/api/config`:
