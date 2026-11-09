@@ -383,6 +383,12 @@ def parse_args() -> argparse.Namespace:
         default=15,
         help="seconds to sleep before looking again when no new init is available or a pass failed",
     )
+    p.add_argument(
+        "--max-runs",
+        type=int,
+        default=0,
+        help="exit after this many published inits (0 = run until interrupted); for benchmarks",
+    )
     p.add_argument("--n-steps", type=int, default=12, help="forecast steps of 10 min (12 = 2 h)")
     p.add_argument(
         "--region",
@@ -408,6 +414,8 @@ def parse_args() -> argparse.Namespace:
 
     if args.n_steps < 1:
         p.error("--n-steps must be >= 1")
+    if args.max_runs < 0:
+        p.error("--max-runs must be >= 0")
     if args.min_lag < 0:
         p.error("--min-lag must be >= 0")
     args.min_lag = timedelta(minutes=args.min_lag)
@@ -797,6 +805,7 @@ def main():
     pipeline = StormScopeUSPipeline(device=args.device, region=args.region)
 
     last_start = None
+    n_runs = 0
     while True:
         try:
             analysis_time = resolve_start_time(
@@ -819,6 +828,10 @@ def main():
                 arraylake_repo=args.arraylake_repo,
             )
             last_start = start_time
+            n_runs += 1
+            if args.max_runs and n_runs >= args.max_runs:
+                print(f"--max-runs {args.max_runs} reached; exiting")
+                break
         except Exception as e:
             print(
                 f"{datetime.now()}: Exception occurred: {e!r}, retrying after {args.wait_seconds} s"

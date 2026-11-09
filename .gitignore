@@ -12,3 +12,4 @@ presentation/web/vendor
 *.mp4
 presentation/offline
 
+logs/
