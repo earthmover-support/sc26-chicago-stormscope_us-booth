@@ -103,6 +103,7 @@ member.
 | 2026-11-09 20:04 | 2352303 | g7e.8xlarge | RTX PRO 6000 Server | 3 | - | - | - | - | failed: default AMI has no open kernel modules, no GPU (fixed with `--ami-version DL`) |
 | 2026-11-09 20:20 | 2352426 | g7e.8xlarge | RTX PRO 6000 Server | 3 | - | - | - | - | failed: bootstrap exited after the first pip install, cause not logged; VM stopped (no keepalive) |
 | 2026-11-09 20:41 | 2352507 | g6e.8xlarge | L40S 48 GB | 3 | 7.0 | 18.4 | 3.9 | 0.0 | OK, local store; total 33.6 s; init 19:00 |
+| 2026-11-09 21:00 | 2352507 | g6e.8xlarge | L40S 48 GB | 12 | 6.8 | 9.2 | 3.7 (3.3 from step 4) | 0.7 | OK, Arraylake `nvidia/sc26-chicago-stormscope_us-booth` commit `EYATA1996D8V8D11KM3G`; total 55.7 s; init 20:30; same VM as the row above, so the compile cache was warm |
 
 ## Sources
 
