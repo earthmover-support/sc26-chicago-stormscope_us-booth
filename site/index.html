@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StormScope-US SC26 Chicago mobile</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<!-- The map waits for the style and its sprite before it adds a frame; fetch them during the MapLibre download. -->
+<link rel="preload" href="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json" as="fetch" crossorigin>
+<link rel="preconnect" href="https://tiles.basemaps.cartocdn.com" crossorigin>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css">
+<style>
+  /* NVIDIA palette */
+  :root {
+    --bg: #000; --surface: #0d0d0d; --border: #1e1e1e; --border2: #2a2a2a;
+    --text: #eaeaea; --text-dim: #999; --green: #76b900; --green-dim: rgba(118, 185, 0, .14);
+    --font: "NVIDIA Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  html, body, #map { margin: 0; height: 100%; background: var(--bg); }
+  #panel {
+    position: absolute; top: 12px; left: 12px; z-index: 1; width: 280px; padding: 16px;
+    display: grid; gap: 14px; background: rgba(0, 0, 0, .85); border: 1px solid var(--border);
+    font: 700 13px var(--font); color: var(--text); -webkit-font-smoothing: antialiased;
+  }
+  .logos { display: flex; align-items: center; gap: 6px; }
+  .logos img { height: 18px; }
+  .logos .em-logo { height: 25.2px; transform: translateY(-24.6%); } /* earthmover "a" = NVIDIA "A" height (1.398 x); onto NVIDIA's baseline */
+  .logos span { color: var(--text-dim); font-size: 16px; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 4px; }
+  .links { display: flex; gap: 4px; padding-top: 3px; }
+  .links a { display: block; width: 30px; height: 30px; color: var(--text-dim); opacity: .85; }
+  .links a:hover { color: var(--green); opacity: 1; }
+  .links svg, .links img { width: 100%; height: 100%; display: block; }
+  .head > div:first-child { flex: 1; text-align: center; }
+  .title { font-size: 17px; letter-spacing: -.3px; }
+  .subtitle { color: var(--text-dim); margin-top: 2px; }
+  .label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+  .row { display: flex; gap: 6px; align-items: center; }
+  select, button { font: inherit; border-radius: 0; cursor: pointer; }
+  select { width: 100%; padding: 6px; background: var(--surface); color: var(--text); border: 1px solid var(--border2); }
+  .pill { flex: 1; padding: 7px 10px; background: transparent; color: var(--text-dim); border: 1px solid var(--border2); }
+  .pill:hover, .pill.active { border-color: var(--green); color: var(--green); }
+  .pill.active { background: var(--green-dim); }
+  #play { width: 32px; height: 32px; flex-shrink: 0; background: var(--green); color: #000; border: none; }
+  #play:hover { background: #8fd400; }
+  input[type=range] { flex: 1; accent-color: var(--green); }
+  #lead { flex: 1; font-size: 15px; }
+  #collapse { width: 28px; height: 28px; flex-shrink: 0; padding: 0; background: transparent; color: var(--text-dim); border: 1px solid var(--border2); }
+  #collapse:hover { border-color: var(--green); color: var(--green); }
+  /* Collapsed: only lead time, play and slider stay visible */
+  #panel.collapsed > :not(#playback, #demo), #panel.collapsed #playback > .label { display: none; }
+  #panel.collapsed { padding: 10px 12px; }
+  #demo { font-weight: 400; font-size: 11px; color: var(--text-dim); }
+  #demo a { color: var(--green); }
+  #status { font-size: 11px; padding: 6px 8px; border-left: 3px solid var(--green); background: var(--surface); color: var(--text-dim); }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="panel">
+  <div class="logos"><img src="nvidia.svg" alt="NVIDIA"><span>×</span><img src="earthmover.svg" alt="Earthmover" class="em-logo"></div>
+  <div class="head">
+    <div>
+      <div class="title">StormScope-US nowcast</div>
+      <div class="subtitle">GOES-19 ABI · Arraylake Flux tiles</div>
+    </div>
+    <div class="links">
+      <a href="https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth" title="Code on GitHub" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-label="GitHub"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+      </a>
+      <a href="https://app.earthmover.io/nvidia/sc26-chicago-stormscope_us-booth" title="Dataset on Arraylake" target="_blank" rel="noopener">
+        <img src="arraylake.svg" alt="Arraylake">
+      </a>
+    </div>
+  </div>
+  <div><div class="label">Init (<span id="tz">UTC</span>)</div><select id="init"></select></div>
+  <div>
+    <div class="label">Variable</div>
+    <div class="row" id="vars">
+      <button class="pill active" data-var="true_color">True colour</button>
+      <button class="pill" data-var="clean_ir">Clean IR</button>
+    </div>
+  </div>
+  <div id="playback">
+    <div class="label">Lead time</div>
+    <div class="row"><div id="lead"></div><button id="collapse" aria-controls="panel" aria-expanded="true" title="Collapse panel">▴</button></div>
+    <div class="row" style="margin-top: 8px"><button id="play">❚❚</button><input id="slider" type="range" min="0" value="0" step="1"></div>
+  </div>
+  <div id="demo">Temporary demo pipeline for SC26 Chicago. It goes offline after the event.<a id="blog" hidden target="_blank" rel="noopener"> Read the blog post</a></div>
+  <div id="status">Loading inits…</div>
+</div>
+<script type="module">
+// MapLibre 6 ships ES modules only.
+import * as maplibregl from "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
+
+// Flux tiles service, docs.earthmover.io/compute/tiles#maplibremapbox
+// TODO: the nvidia org's Flux tiles service (see TODO.md)
+const FLUX = "https://TODO-tiles-host.compute.arraylake.app/v1/services/TODO-tiles/nvidia";
+// On Vercel (the only https host), go through the /flux rewrite in vercel.json so Vercel's CDN
+// renders each tile once for all visitors; locally, straight to the service.
+const BASE = location.protocol === "https:" ? "/flux" : FLUX;
+const REPO = "sc26-chicago-stormscope_us-booth";
+const REF = "main";
+// The RGB composites are stored as uint8 bytes, hence one colour scale.
+const COLORSCALERANGE = "0,255";
+const BOUNDS = [-133.712, 21.582, -61.337, 52.145]; // lat/lon extent of the model grid
+const FRAME_MS = 800;
+const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
+const LEADS_IN_FLIGHT = 3; // frames loading at once; one at a time waits on each frame's slowest tile
+const POLL_MS = 60000; // how often to look for a new init
+const INITS = 144; // the selector offers the past 24 h, one init every 10 min
+const VENUE = [41.8517, -87.6167]; // McCormick Place; decides day or night for the starting composite
+
+// Keep tiles across variable switches and reloads; see sw.js.
+// Service workers need https or localhost; opened as a file:// page, tiles aren't cached.
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch((e) => console.warn("No tile cache:", e.message));
+
+const $ = (id) => document.getElementById(id);
+
+const BLOG_URL = ""; // blog post about the demo, linked from the demo note; hidden while empty
+if (BLOG_URL) Object.assign($("blog"), { href: BLOG_URL, hidden: false });
+
+// Times show in the viewer's own zone, or Chicago's when the browser reports none. Inits are
+// stored in UTC and the selector's option values stay UTC, since they go into tile URLs.
+const TZ = (() => {
+  try {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    new Intl.DateTimeFormat("en", { timeZone: zone }); // throws on a zone it doesn't know
+    return zone || "America/Chicago";
+  } catch {
+    return "America/Chicago";
+  }
+})();
+const HM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const YMD = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
+const utc = (t) => new Date(Date.parse(t + "Z"));
+const initLabel = (t) => `${YMD.format(utc(t))} ${HM.format(utc(t))}`;
+// Zone abbreviation for `d` (CEST vs CET depends on the date). en-GB names the European
+// zones, en-US the American ones; anywhere else this is an offset like "GMT+3".
+function tzName(d) {
+  const name = (locale) =>
+    new Intl.DateTimeFormat(locale, { timeZone: TZ, timeZoneName: "short" })
+      .formatToParts(d).find((p) => p.type === "timeZoneName").value;
+  const gb = name("en-GB");
+  return /^(GMT|UTC)[+-]/.test(gb) ? name("en-US") : gb;
+}
+$("tz").textContent = tzName(new Date());
+// Sun above the horizon at (lat, lon) at time t; low-precision solar position, good to ~1°.
+function sunUp(lat, lon, t = new Date()) {
+  const r = Math.PI / 180, d = t / 864e5 - 10957.5; // days since J2000.0
+  const g = (357.529 + 0.98560028 * d) * r;
+  const L = (280.459 + 0.98564736 * d + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * r;
+  const e = (23.439 - 3.6e-7 * d) * r;
+  const dec = Math.asin(Math.sin(e) * Math.sin(L));
+  const ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+  const H = (280.46061837 + 360.98564736629 * d + lon) * r - ra; // local hour angle
+  return Math.sin(lat * r) * Math.sin(dec) + Math.cos(lat * r) * Math.cos(dec) * Math.cos(H) > 0;
+}
+// True colour is black at night, so a page opened while the venue is dark starts on Clean IR
+let leads = [], variable = sunUp(...VENUE) ? "true_color" : "clean_ir", frame = 0, timer = null, firstLabel, runs = 0;
+// A run is one init and variable: { id, time, variable, added, addedAt, loaded }, where
+// `loaded` holds the indices of frames whose tiles have all arrived.
+let run = null; // on screen
+let next = null; // a newer init loading in the background; replaces `run` once complete
+
+// MapLibre's default of 16 parallel tile requests would cap LEADS_IN_FLIGHT; the tiles
+// service speaks HTTP/2, so the browser's 6-per-host limit doesn't apply
+maplibregl.setMaxParallelImageRequests(64);
+const map = new maplibregl.Map({
+  container: "map",
+  style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+  bounds: [[-125, 24], [-67, 50]], // contiguous US
+  maxZoom: 8,
+});
+map.addControl(new maplibregl.NavigationControl());
+
+// /info fails on this repo; /tree (xarray's HTML repr) carries the coordinate arrays. Past 200
+// values xarray abbreviates an array to its first and last three, so the "..." entry is dropped.
+async function loadCoords() {
+  const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${REF}/tree`, { cache: "no-store" })).text();
+  const pres = [...html.matchAll(/<pre>(array\(\[[^\[][\s\S]*?\))<\/pre>/g)].map((m) => m[1].replace(/&#x27;/g, "'"));
+  const values = (s) => s.slice(s.indexOf("[") + 1, s.indexOf("]")).split(",").map((v) => v.trim().replace(/'/g, "")).filter((v) => v !== "...");
+  const times = values(pres.find((s) => s.includes("datetime64"))).map((t) => t.slice(0, 19));
+  // The repo holds far more than 200 inits, so only the newest is known: count back from it.
+  // ponytail: assumes no init is missing; a gap shows blank frames, list the real times if that bites
+  const newest = utc(times.at(-1)).getTime();
+  return {
+    times: Array.from({ length: INITS }, (_, k) => new Date(newest - (INITS - 1 - k) * 600000).toISOString().slice(0, 19))
+      .filter((t) => t >= times[0]),
+    leads: values(pres.find((s) => s.includes("timedelta64[m]"))).map(Number),
+  };
+}
+const coords = loadCoords(); // runs while the basemap style loads
+
+function tileUrl(r, lead) {
+  const p = new URLSearchParams({
+    variables: r.variable, style: "raster/rgb", colorscalerange: COLORSCALERANGE,
+    time: r.time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
+  });
+  return `${BASE}/${REPO}/${REF}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
+}
+
+// One raster layer per lead time, all kept loaded; playback only flips opacity.
+// Frames are added in playback order, LEADS_IN_FLIGHT at a time (or once one times out):
+// asking for every lead at once gets the early frames no sooner.
+// A run the visitor picks replaces the one on screen at once; a new init found by polling
+// loads behind it, so the animation keeps going until the new run is complete.
+function startRun(time, background = false) {
+  const keep = !background && next?.time === time && next.variable === variable; // keeps the frames it has
+  if (next && !keep) dropRun(next);
+  const r = keep ? next : { id: runs++, time, variable, added: 0, addedAt: 0, loaded: new Set() };
+  next = background ? r : null;
+  if (!background) promote(r, leads.length ? Math.min(frame, leads.length - 1) : 0); // keep the time step across RGB switches
+  tick();
+}
+
+const fid = (r, i) => `frame-${r.id}-${i}`;
+
+function promote(r, k) {
+  if (run) dropRun(run);
+  run = r;
+  next = null;
+  $("init").value = r.time;
+  show(k);
+}
+
+function dropRun(r) {
+  for (let i = 0; i < r.added; i++) {
+    map.removeLayer(fid(r, i));
+    map.removeSource(fid(r, i));
+  }
+}
+
+// Every frame has been added, and all have loaded or the last one added timed out.
+const complete = (r) =>
+  r.added === leads.length && (r.loaded.size === leads.length || Date.now() - r.addedAt >= LOAD_TIMEOUT_MS);
+
+// The background run only loads once the one on screen is complete, so the two never
+// compete for the tiles service.
+function tick() {
+  addNext(run);
+  if (next && complete(run)) {
+    addNext(next);
+    if (complete(next)) promote(next, next.loaded.has(frame) ? frame : 0); // keep the loop's place if that frame loaded
+  }
+  status();
+}
+
+function addNext(r) {
+  const i = r.added;
+  const busy = i - r.loaded.size; // added, not yet loaded
+  // Frame 0 loads alone, so it gets all the bandwidth and is on screen first.
+  const limit = r.loaded.has(0) ? LEADS_IN_FLIGHT : 1;
+  if (i >= leads.length || (busy >= limit && Date.now() - r.addedAt < LOAD_TIMEOUT_MS)) return;
+  const id = fid(r, i);
+  map.addSource(id, { type: "raster", tiles: [tileUrl(r, leads[i])], tileSize: 512, bounds: BOUNDS, maxzoom: 7 });
+  map.addLayer({
+    id, type: "raster", source: id,
+    paint: { "raster-opacity": r === run && i === frame ? 0.9 : 0, "raster-opacity-transition": { duration: 0 }, "raster-fade-duration": 0 },
+  }, firstLabel);
+  r.added++;
+  r.addedAt = Date.now();
+  setTimeout(tick, LOAD_TIMEOUT_MS);
+  addNext(r);
+}
+
+map.on("sourcedata", (e) => {
+  const [, id, i] = e.sourceId?.match(/^frame-(\d+)-(\d+)$/) ?? []; // none for the basemap's sources
+  const r = [run, next].find((r) => r?.id === Number(id));
+  if (!e.tile || !r || r.loaded.has(+i) || !map.isSourceLoaded(e.sourceId)) return;
+  r.loaded.add(+i);
+  tick();
+});
+
+// With the globe turned away from the US a frame has no tile in view, so it never gets a tile
+// event above; once the map is idle, every source it draws has loaded.
+map.on("idle", () => {
+  if (!run) return;
+  for (const r of [run, next]) for (let i = 0; r && i < r.added; i++) r.loaded.add(i);
+  tick();
+});
+
+function status() {
+  $("status").textContent =
+    `${run.loaded.size}/${leads.length} frames loaded${complete(run) ? "" : ", playing once all are in"}` +
+    (next ? ` · newer run ${next.loaded.size}/${leads.length}` : "");
+  renderOptions();
+}
+
+// The init selector's labels; the init loading in the background shows its progress.
+function renderOptions() {
+  for (const o of $("init").options) {
+    o.textContent = initLabel(o.value) + (o.value === next?.time ? ` · loading ${next.loaded.size}/${leads.length}` : "");
+  }
+}
+
+function show(k) {
+  if (map.getLayer(fid(run, frame))) map.setPaintProperty(fid(run, frame), "raster-opacity", 0);
+  frame = k;
+  if (map.getLayer(fid(run, k))) map.setPaintProperty(fid(run, k), "raster-opacity", 0.9);
+  $("slider").value = k;
+  const valid = new Date(utc(run.time).getTime() + leads[k] * 60e3);
+  $("lead").textContent = `${leads[k] === 0 ? "analysis" : "+" + leads[k] + " min"} · valid ${HM.format(valid)} ${tzName(valid)}`;
+}
+
+// Playback holds the first frame until the run is complete, then steps through the frames
+// that have finished loading (a frame that timed out is skipped).
+function step() {
+  if (!complete(run)) return;
+  const ready = [...run.loaded].sort((a, b) => a - b);
+  if (ready.length) show(ready.find((k) => k > frame) ?? ready[0]);
+}
+
+function setCollapsed(on) {
+  $("panel").classList.toggle("collapsed", on);
+  $("collapse").textContent = on ? "▾" : "▴";
+  $("collapse").title = on ? "Expand panel" : "Collapse panel";
+  $("collapse").setAttribute("aria-expanded", String(!on));
+}
+$("collapse").onclick = () => setCollapsed(!$("panel").classList.contains("collapsed"));
+setCollapsed(matchMedia("(max-width: 600px)").matches); // phones start collapsed
+
+function setPlaying(on) {
+  clearInterval(timer);
+  timer = on ? setInterval(step, FRAME_MS) : null;
+  $("play").textContent = on ? "❚❚" : "▶";
+}
+
+// Fills the init selector from the coordinates, keeping the selected init if it is still there.
+async function useCoords(pending) {
+  let times;
+  try {
+    ({ times, leads } = await pending);
+  } catch (e) {
+    $("status").textContent = `Could not reach the tiles service: ${e.message}`;
+    return false;
+  }
+  const prev = $("init").value;
+  $("init").innerHTML = times.slice().reverse().map((t) => `<option value="${t}"></option>`).join("");
+  renderOptions();
+  if (times.includes(prev)) $("init").value = prev;
+  $("slider").max = leads.length - 1;
+  frame = Math.min(frame, leads.length - 1);
+  return true;
+}
+
+// style.load, not load: load also waits for the basemap tiles, which the frames do not need.
+map.once("style.load", async () => {
+  map.setProjection({ type: "globe" });
+  firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
+  if (!(await useCoords(coords))) return;
+  $("init").onchange = () => startRun($("init").value);
+  const pills = document.querySelectorAll(".pill");
+  for (const p of pills) p.classList.toggle("active", p.dataset.var === variable);
+  for (const b of pills) b.onclick = () => {
+    for (const p of pills) p.classList.toggle("active", p === b);
+    variable = b.dataset.var;
+    startRun(next?.time ?? $("init").value); // picks up a newer init still loading in the background
+  };
+  $("slider").oninput = (e) => { setPlaying(false); show(+e.target.value); };
+  $("play").onclick = () => setPlaying(!timer);
+  startRun($("init").value);
+  setPlaying(true);
+  setInterval(pollInits, POLL_MS);
+});
+
+// Loads the newest init once the pipeline has committed one; a failed check waits for the next.
+async function pollInits() {
+  const newest = $("init").options[0]?.value;
+  let c;
+  try { c = await loadCoords(); } catch { return; }
+  const latest = c.times.at(-1);
+  const sameLeads = c.leads.join() === leads.join(); // runs count their frames against `leads`
+  if (latest === newest && sameLeads) return;
+  await useCoords(c);
+  startRun(latest, sameLeads);
+}
+</script>
+</body>
+</html>
