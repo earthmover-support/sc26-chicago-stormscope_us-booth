@@ -165,10 +165,23 @@ let next = null; // a newer init loading in the background; replaces `run` once 
 // MapLibre's default of 16 parallel tile requests would cap LEADS_IN_FLIGHT; the tiles
 // service speaks HTTP/2, so the browser's 6-per-host limit doesn't apply
 maplibregl.setMaxParallelImageRequests(64);
+// Start zoomed so the screen lies inside the data on every side ("cover", not "contain"): a
+// tall phone screen would otherwise show the empty map above and below the tiles.
+const VIEW = [-115, 27, -72, 47.5]; // lon/lat box safely inside the data's edges
+function coverCamera(el) {
+  const mx = (lon) => (lon + 180) / 360;
+  const my = (lat) => (1 - Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)) / Math.PI) / 2;
+  const dx = mx(VIEW[2]) - mx(VIEW[0]), dy = my(VIEW[1]) - my(VIEW[3]);
+  const yc = (my(VIEW[1]) + my(VIEW[3])) / 2;
+  return {
+    center: [(VIEW[0] + VIEW[2]) / 2, (Math.atan(Math.sinh(Math.PI * (1 - 2 * yc))) * 180) / Math.PI],
+    zoom: Math.log2(Math.max(el.clientWidth / dx, el.clientHeight / dy) / 512),
+  };
+}
 const map = new maplibregl.Map({
   container: "map",
   style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-  bounds: [[-125, 24], [-67, 50]], // contiguous US
+  ...coverCamera(document.getElementById("map")),
   maxZoom: 8,
 });
 map.addControl(new maplibregl.NavigationControl());
