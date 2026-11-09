@@ -2,8 +2,9 @@
 
 The pipeline runs in AWS **us-east-1**. This is the same region as the NOAA GOES-19
 bucket (`noaa-goes19`), so there is no cross-region transfer (see `AGENTS.md`).
-GPU VMs are started with [Coiled](https://docs.coiled.io) (dev dependency). The Coiled
-workspace `aaron_spring` uses the AWS backend in `us-east-1`.
+GPU VMs are started with [Coiled](https://docs.coiled.io) (dev dependency) in the
+`earthmover-devs` workspace (AWS backend, default region us-west-2, so every command
+passes `--region us-east-1`).
 
 At GTC Berlin we used a B200 (`p6-b200.48xlarge`).
 
@@ -50,8 +51,15 @@ The pipeline uses one GPU. From fastest to slowest (us-east-1 on-demand $/h):
 | RTX PRO 4500 (Blackwell) | `g7.2xlarge` (2.52), `g7.8xlarge` (4.09) |
 | A10G 24 GB, L4 24 GB, T4, V100 | `g5`, `g6`, `g4dn`, `p3`: too slow or too little memory for this model |
 
-**Capacity on 2026-11-09:** `p5.4xlarge` returned `InsufficientInstanceCapacity` in
-every us-east-1 zone (a to f), in two tries.
+**Capacity on 2026-11-09 (us-east-1):** capacity changes from minute to minute.
+
+| Time (UTC) | Result |
+|---|---|
+| 20:00, 20:01 | `p5.4xlarge` only: `InsufficientInstanceCapacity` in every zone (a to f) |
+| 20:03 | 6-type list: got `g7e.8xlarge` (failed later, see the timing log) |
+| 20:19 | same 6-type list: every type full |
+| 20:20 | same list, first retry: got `g7e.8xlarge` again (VM lost, no keepalive) |
+| 20:35 | 10-type list (below), first try: got `g6e.8xlarge`; this is the running VM |
 
 ## Run on Coiled
 
@@ -61,17 +69,62 @@ See [Coiled GPU clusters](https://docs.coiled.io/user_guide/clusters/gpu.html). 
 
 The Docker image is not in a registry. `scripts/coiled_bootstrap.sh` starts from the
 public NGC base image, repeats the Dockerfile's pip installs, and then runs the pipeline.
-Give several `--vm-type` options, fastest first. Coiled uses the next one if AWS has no
-capacity:
+It skips the installs when they are already done on the VM.
+
+### Currently running (since 2026-11-09)
+
+| | |
+|---|---|
+| Cluster | `stormscope-us-gpu`, id 2352507, workspace `earthmover-devs` |
+| Instance | `g6e.8xlarge`, 1x L40S 48 GB, us-east-1, $4.53/h |
+| Job | continuous: a 12-step forecast per 5-min GOES scan, published to `nvidia/sc26-chicago-stormscope_us-booth` (since 21:10 UTC) |
+| Keepalive | 4 h after the command ends; the continuous loop does not end, so the VM runs until it is stopped |
+| Stop | `uv run coiled cluster stop --workspace earthmover-devs stormscope-us-gpu` |
+| Logs | `uv run coiled logs --workspace earthmover-devs --cluster stormscope-us-gpu --label none` |
+
+### Step 1: get a GPU VM
+
+Give all single-GPU types under $10/h, fastest first. Coiled uses the next one if AWS
+has no capacity. If all are full, the command fails without starting a VM (no cost), so
+retry in a loop. This loop got the running VM on its first try:
 
 ```bash
-uv run coiled run --workspace earthmover-devs --region us-east-1 --ami-version DL \
-  --vm-type p5.4xlarge --vm-type g7e.8xlarge --vm-type g7e.4xlarge --vm-type g7e.2xlarge \
-  --vm-type g6e.8xlarge --vm-type g6e.4xlarge \
-  --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
-  --docker-shm-size "1 GiB" --file scripts/ --detach --keepalive 4h \
-  -- bash scripts/coiled_bootstrap.sh --n-steps 3 --start-time 2026-11-09T19:00 --publish-target local
+for n in $(seq 1 14); do
+  uv run coiled run --workspace earthmover-devs --name stormscope-us-gpu --region us-east-1 \
+    --ami-version DL --keepalive 4h \
+    --vm-type p5.4xlarge --vm-type g7e.8xlarge --vm-type g7e.4xlarge --vm-type g7e.2xlarge \
+    --vm-type g7e.12xlarge --vm-type g6e.16xlarge --vm-type g6e.8xlarge --vm-type g6e.4xlarge \
+    --vm-type g6e.2xlarge --vm-type g6e.xlarge \
+    --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
+    --docker-shm-size "1 GiB" --file scripts/ --detach \
+    -- bash scripts/coiled_bootstrap.sh --n-steps 3 --start-time 2026-11-09T19:00 --publish-target local \
+    > run.log 2>&1
+  grep -q "VM Type: *[a-z]" run.log && break  # got a VM
+  sleep 120
+done
 ```
+
+The command in the loop is a 3-step test into a local store on the VM. It installs the
+dependencies and warms the compile cache.
+
+### Step 2: run continuously on that VM
+
+The same `--name` reuses the running VM. `--env` sends the Arraylake token from `.env`
+to the VM; it is not stored anywhere. Without `--start-time` the pipeline loops and runs
+each new init:
+
+```bash
+(set -a; . ./.env; set +a
+ uv run coiled run --workspace earthmover-devs --name stormscope-us-gpu --region us-east-1 \
+   --ami-version DL --keepalive 4h --vm-type g6e.8xlarge \
+   --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
+   --docker-shm-size "1 GiB" --file scripts/ --detach \
+   --env ARRAYLAKE_API_TOKEN="$ARRAYLAKE_API_TOKEN" \
+   -- bash scripts/coiled_bootstrap.sh --n-steps 12 --publish-target arraylake \
+      --arraylake-repo nvidia/sc26-chicago-stormscope_us-booth)
+```
+
+The repo holds 12 lead steps, so every run must use `--n-steps 12`.
 
 **Always pass `--ami-version DL`.** Blackwell GPUs (`g7e`, `g7`, B200, B300) work only
 with NVIDIA's open kernel modules. Coiled's default AMI has the proprietary driver, so
@@ -104,6 +157,7 @@ member.
 | 2026-11-09 20:20 | 2352426 | g7e.8xlarge | RTX PRO 6000 Server | 3 | - | - | - | - | failed: bootstrap exited after the first pip install, cause not logged; VM stopped (no keepalive) |
 | 2026-11-09 20:41 | 2352507 | g6e.8xlarge | L40S 48 GB | 3 | 7.0 | 18.4 | 3.9 | 0.0 | OK, local store; total 33.6 s; init 19:00 |
 | 2026-11-09 21:00 | 2352507 | g6e.8xlarge | L40S 48 GB | 12 | 6.8 | 9.2 | 3.7 (3.3 from step 4) | 0.7 | OK, Arraylake `nvidia/sc26-chicago-stormscope_us-booth` commit `EYATA1996D8V8D11KM3G`; total 55.7 s; init 20:30; same VM as the row above, so the compile cache was warm |
+| 2026-11-09 21:11–21:26 | 2352507 | g6e.8xlarge | L40S 48 GB | 12 | 3.3–6.4 | - | 3.4–4.0 (rollout+write 40.4–48.0 s / 12) | 0.5–0.7 | OK, continuous, inits 21:05–21:20 every 5 min; total 44.3–54.9 s; published ~6 min after slot time |
 
 ## Sources
 
