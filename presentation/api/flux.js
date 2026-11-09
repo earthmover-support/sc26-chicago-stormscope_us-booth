@@ -10,7 +10,7 @@
 import { getCache } from "@vercel/functions";
 
 // TODO: the nvidia org's Flux tiles service (see TODO.md)
-const FLUX = "https://TODO-tiles-host.compute.arraylake.app/v1/services/TODO-tiles/nvidia";
+const FLUX = "https://tiles-dd7cd36ec0562874.compute.arraylake.app/v1/services/tiles/nvidia";
 const REPO = "sc26-chicago-stormscope_us-booth";
 // Only what the page requests: an unchecked path with `..` would reach other services on the host.
 const ALLOWED = new RegExp(`^${REPO}/(main|[0-9A-Z]{20})/tiles/WebMercatorQuad/\\d+/\\d+/\\d+$`);

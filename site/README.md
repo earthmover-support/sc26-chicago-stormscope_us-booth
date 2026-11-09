@@ -8,8 +8,7 @@ venue. Playback holds the first frame until all leads have loaded. Every minute 
 for a new init, loads it in the background, and switches to it once it is complete. No
 build step and no server: `index.html`, `sw.js`, three logo SVGs and one Vercel function.
 
-The tiles service URL (`FLUX` in `index.html` and `api/flux.js`) is a `TODO-tiles-host`
-placeholder until the service exists (see [TODO.md](../TODO.md)).
+The tiles service URL is `FLUX` in `index.html` and `api/flux.js`.
 
 ## Tile cache
 

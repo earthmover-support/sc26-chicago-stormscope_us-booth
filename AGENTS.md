@@ -42,4 +42,4 @@ is kept besides its structure.
 
 - `uv run pytest` must pass (no GPU needed); `uvx pre-commit run --all-files` for ruff.
 - Keep `TODO.md` current whenever a placeholder, assumption or blocker needs the user.
-- Placeholders (`TODO-tiles-host`, empty `sql.host`, `TODO-viewer-url`) mark infra that does not exist yet.
+- Placeholders (`TODO-viewer-url`) mark infra that does not exist yet.

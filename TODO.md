@@ -12,8 +12,6 @@ delete them when done.
 
 ## To fix / provide
 
-- [ ] Flux tiles service in the `nvidia` org (us-east-1): enable it and replace the `TODO-tiles-host` URLs in `presentation/config.json` (`tile_base`), `presentation/api/flux.js`, `site/index.html` and `site/api/flux.js`.
-- [ ] SQL service host for the `nvidia` org (`sql.host` in `presentation/config.json`, empty until then, which shows SQL as disabled).
 - [ ] Vercel projects and domains for the hosted presentation and the mobile viewer: replace `viewer_url` (`TODO-viewer-url`) in `presentation/config.json` and the links in `README.md`. Both Vercel proxies are pinned to `iad1`; move them if the tiles service is not in us-east-1.
 - [ ] Read-only Arraylake token for the hosted presentation (Vercel env).
 - [ ] GPU host to run the pipeline (CUDA, NVIDIA Container Toolkit, NGC login if needed). Pick the instance type in us-east-1 (B200 = `p6-b200.48xlarge`, 8 GPUs only, ~$114/h on-demand; 1x H100 `p5.4xlarge` ~$6.88/h) and check the EC2 GPU quota / Capacity Block for the booth days.
@@ -22,6 +20,8 @@ delete them when done.
 
 ## Done
 
+- [x] Flux tiles service enabled (`tiles-dd7cd36ec0562874.compute.arraylake.app`), URLs set in `presentation/config.json`, `presentation/api/flux.js`, `site/index.html`, `site/api/flux.js`. Real tiles served (2026-11-09).
+- [x] SQL service enabled; `sql.host` = `sql-4ae7e8fe159e81b6.compute.arraylake.app` (port 5432 reachable; first query with a token still to be tried).
 - [x] GitHub repo `earthmover-support/sc26-chicago-stormscope_us-booth` exists and matches the links on the booth page and viewer.
 - [x] Station marker: McCormick Place, Chicago (SC26 venue, 15–20 Nov 2026).
 - [x] SQL places in date order: SC26 Chicago, GTC DC (Ronald Reagan Building), AGU26 San Francisco (Moscone), AMS 2027 Denver (Colorado Convention Center), GTC San Jose (McEnery Convention Center).

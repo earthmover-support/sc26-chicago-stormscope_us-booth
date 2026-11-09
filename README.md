@@ -33,8 +33,8 @@ Both presentation deployments serve the same `presentation/web/` page and the sa
 
 ## Viz
 
-Tiles come from a public Flux tiles service in the `nvidia` org (TODO: enable it and fill
-in `tile_base`, see [TODO.md](TODO.md)). Public, because the booth screen and phones fetch
+Tiles come from a public Flux tiles service in the `nvidia` org
+(`tiles-dd7cd36ec0562874.compute.arraylake.app`, set as `tile_base`). Public, because the booth screen and phones fetch
 tiles straight from the browser, which can't attach an `Authorization` header; rendered
 tiles are reachable by anyone holding the URL, the underlying chunks stay private. Run it
 in us-east-1 next to the data, with replicas pinned during booth hours:

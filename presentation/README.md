@@ -59,10 +59,10 @@ sticks for the day. The page starts (and resets) on `true_color` while the sun i
 
 ## Before the event
 
-1. **Tiles**: enable the `nvidia` org's Flux tiles service (public, so browsers and phones
-   fetch tiles without a token) and put its URL in `tile_base` (`config.json`) and in
-   `api/flux.js` / `../site/` -- they are `TODO-tiles-host` placeholders until then (see
-   [TODO.md](../TODO.md) and [Viz](../README.md#viz)). Each pod caches on its own and
+1. **Tiles**: the `nvidia` org's Flux tiles service (public, so browsers and phones
+   fetch tiles without a token) is `tiles-dd7cd36ec0562874.compute.arraylake.app`; its URL is
+   in `tile_base` (`config.json`), `api/flux.js` and `../site/` (see
+   [Viz](../README.md#viz)). Each pod caches on its own and
    starts empty, so load the booth page once and let one run play before doors open.
 2. **Inits**: the page reads `nvidia/sc26-chicago-stormscope_us-booth` (root group). The
    pipeline appends every run's init to `time` and never drops one; the page offers the
@@ -75,8 +75,9 @@ sticks for the day. The page starts (and resets) on `true_color` while the sun i
    B=<tile_base from config.json>
    curl -o t.png -w '%{http_code}\n' "$B/main/tiles/WebMercatorQuad/3/2/3?variables=true_color&style=raster/rgb&colorscalerange=0,255&time=<INIT>&lead_time=10%20minutes&ensemble=0&f=png"
    ```
-3. **SQL**: `al compute enable nvidia sql --sku-code xs`; its hostname goes in
-   `config.json` (`sql.host`, empty until then, which shows SQL as disabled) or `.env`
+3. **SQL**: `al compute enable nvidia sql --sku-code xs`; its hostname
+   (`sql-4ae7e8fe159e81b6.compute.arraylake.app`) is in `config.json` (`sql.host`; empty
+   shows SQL as disabled) or `.env`
    (`ARRAYLAKE_SQL_HOST=...`, wins). The service scales to zero, so fire one query before
    visitors arrive. Panel 08 is a live editor: click a venue chip (`sql.places`) or type
    any single `SELECT`/`WITH` statement and press ⌘/Ctrl+Enter; Esc leaves the box. The
