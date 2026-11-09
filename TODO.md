@@ -18,6 +18,6 @@ delete them when done.
 - [ ] SQL service host for the `nvidia` org (`sql.host` in `presentation/config.json`).
 - [ ] Vercel projects and domains for the hosted presentation and the mobile viewer (replace the `viewer_url` and README links).
 - [ ] Read-only Arraylake token for the hosted presentation (Vercel env).
-- [ ] GPU host to run the pipeline (CUDA, NVIDIA Container Toolkit, NGC login if needed).
+- [ ] GPU host to run the pipeline (CUDA, NVIDIA Container Toolkit, NGC login if needed). Pick the instance type in us-east-1 (B200 = `p6-b200.48xlarge`, 8 GPUs only, ~$114/h on-demand; 1x H100 `p5.4xlarge` ~$6.88/h) and check the EC2 GPU quota / Capacity Block for the booth days.
 - [ ] `ARRAYLAKE_API_TOKEN` with write access to `nvidia/sc26-chicago-stormscope_us-booth`.
 - [ ] Check that the earth2studio version with `3km_10min_flash` is released or pinned to a commit.
