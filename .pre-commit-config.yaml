@@ -1,0 +1,11 @@
+# ruff lints and formats Python with the settings in pyproject.toml.
+#
+#   uv tool install pre-commit   # or: pipx install pre-commit
+#   pre-commit install
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10
+    hooks:
+      - id: ruff-check
+      - id: ruff-format
+        types_or: [python, pyi, markdown]  # also the Python examples in docs/*.md

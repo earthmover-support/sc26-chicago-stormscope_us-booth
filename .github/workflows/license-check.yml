@@ -1,0 +1,143 @@
+name: License Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "pyproject.toml"
+      - "uv.lock"
+      - "presentation/package.json"
+      - "presentation/package-lock.json"
+      - "presentation/server.py"
+      - ".github/workflows/license-check.yml"
+  push:
+    branches: [main]
+    paths:
+      - "pyproject.toml"
+      - "uv.lock"
+      - "presentation/package.json"
+      - "presentation/package-lock.json"
+      - "presentation/server.py"
+
+# OSI allow-list shared by both Python audits. Uses --partial-match with short
+# SPDX/classifier tokens so each token substring-matches any variant (e.g. "BSD"
+# matches "BSD License", "BSD-3-Clause", "BSD-2-Clause", and full BSD license
+# text). Multi-license fields like "MPL-2.0 AND MIT" pass if any token matches.
+env:
+  PY_ALLOW_ONLY: "MIT;BSD;Apache;ISC;MPL;Mozilla Public License;PSF;Python Software Foundation;HPND;Historical Permission Notice;Unlicense;Public Domain;Zlib;0BSD;LGPL"
+
+jobs:
+  pip-licenses:
+    # Full-environment audit: installs the locked deps and fails if any
+    # transitive package has a non-allow-listed license.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      - name: Sync locked dependencies
+        run: uv sync --frozen
+
+      - name: Install pip-licenses
+        run: uv pip install pip-licenses
+
+      - name: Generate license report
+        run: |
+          uv run pip-licenses \
+            --format=markdown \
+            --with-urls \
+            --with-license-file \
+            --no-license-path \
+            > licenses.md
+
+      - name: Upload license report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: licenses
+          path: licenses.md
+
+      # Explicitly ignored packages. Keep this list tight — each entry is an
+      # exception to the allow-list and should be justified.
+      #
+      # Missing license metadata (verified upstream):
+      #   - google-crc32c: Apache-2.0 (github.com/googleapis/python-crc32c)
+      #   - icechunk:      Apache-2.0 (github.com/earth-mover/icechunk)
+      #
+      # NVIDIA CUDA runtime wheels pulled in by torch on linux (proprietary,
+      # NVIDIA CUDA EULA, or no license metadata). Redistributable runtime
+      # libraries required to run StormScope-US on GPU; accepted as a scoped
+      # exception. A torch bump that adds a new CUDA wheel fails here on purpose.
+      # nvidia-nvtx's license field says Apache 2.0, but its classifier says
+      # Other/Proprietary, and pip-licenses reads the classifier.
+      - name: Enforce OSI allow-list
+        run: |
+          uv run pip-licenses --partial-match \
+          --ignore-packages \
+            google-crc32c \
+            icechunk \
+            cuda-toolkit \
+            nvidia-cublas \
+            nvidia-cuda-cupti \
+            nvidia-cuda-nvrtc \
+            nvidia-cuda-runtime \
+            nvidia-cudnn-cu13 \
+            nvidia-cufft \
+            nvidia-cufile \
+            nvidia-curand \
+            nvidia-cusolver \
+            nvidia-cusparse \
+            nvidia-cusparselt-cu13 \
+            nvidia-nccl-cu13 \
+            nvidia-nvjitlink \
+            nvidia-nvshmem-cu13 \
+            nvidia-nvtx \
+          --allow-only="$PY_ALLOW_ONLY"
+
+  presentation-server:
+    # server.py runs as a uv script with its own inline dependency list
+    # (`uv run presentation/server.py`), so the locked env above misses e.g.
+    # psycopg. Resolve the script's deps and audit them against the same list.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      - name: Install script dependencies
+        run: |
+          uv export --script presentation/server.py --no-header > requirements.txt
+          uv venv
+          uv pip install -r requirements.txt pip-licenses
+
+      # Missing license metadata, same as the pipeline job:
+      #   google-crc32c, icechunk (both Apache-2.0)
+      - name: Enforce OSI allow-list
+        run: |
+          .venv/bin/pip-licenses --partial-match \
+          --ignore-packages google-crc32c icechunk \
+          --allow-only="$PY_ALLOW_ONLY"
+
+  presentation-npm:
+    # Front-end libraries vendored into the booth page (maplibre-gl, qrcode).
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: presentation
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install locked packages
+        run: npm ci
+
+      - name: Enforce OSI allow-list
+        run: |
+          npx --yes license-checker-rseidelsohn@4 --production \
+            --excludePrivatePackages --summary \
+            --onlyAllow "MIT;ISC;BSD-2-Clause;BSD-3-Clause;Apache-2.0;0BSD"

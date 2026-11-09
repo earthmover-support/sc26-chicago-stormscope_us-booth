@@ -1,0 +1,72 @@
+[project]
+name = "sc26-chicago-stormscope_us-booth"
+version = "0.1.0"
+description = "StormScope-US nowcasting on GOES-19 ABI CONUS -> Arraylake/Icechunk (SC26 Chicago demo)"
+requires-python = "==3.12.*"
+dependencies = [
+    # earth2studio bare (no [data] extra): the full extra pulls cfgrib /
+    # eccodes / eccodeslib, which have no macOS arm64 wheels (eccodeslib is
+    # linux-only), so `uv sync` fails on a Mac. The GOES source only needs core
+    # deps (obstore, h5netcdf); the Icechunk ingest path is listed below.
+    # 0.20.0: first release with StormScopeGOES `3km_10min_flash` and the
+    # IceChunkBackend fix for reopening repos that hold a scalar (CF grid mapping).
+    "earth2studio==0.20.0",
+    "pyproj>=3.7.1",
+    # contents of the `stormscope` extra, minus earth2studio[utils] and natten (see gpu)
+    "nvidia-physicsnemo>=2.2.2",
+    "nvtx>=0.2.11",
+    "omegaconf>=2.3.0",
+    "scipy>=1.15.2",
+    "torch>=2.6",
+    # ingest target
+    "arraylake>=0.14",
+    "icechunk>=1.0",
+    "xarray>=2025.1",
+    "zarr>=3",
+    # misc
+    "python-dotenv",
+    "tqdm",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[project.optional-dependencies]
+# NATTEN is required by StormScopeGOES.load_model (neighborhood attention), and
+# it ships prebuilt wheels only for linux+CUDA (--find-links https://whl.natten.org/)
+# -- building it from the PyPI sdist
+# silently produces a package without libnatten. Do not install this on macOS.
+# earth2grid (git-only, C++ source build against torch) provides the haversine /
+# ang2vec helpers behind StormScope's NearestNeighborInterpolator (GOES grid -> HRRR
+# grid in build_input_interpolator); kept here with NATTEN so a Mac `uv sync` works.
+gpu = [
+    "natten>=0.21.6",
+    "earth2grid",
+]
+
+[tool.uv.sources]
+earth2grid = { git = "https://github.com/NVlabs/earth2grid.git", rev = "11dcf1b0787a7eb6a8497a3a5a5e1fdcc31232d3" }
+
+[tool.uv]
+# eccodeslib (via earth2studio[data]) has released versions with linux-only wheels
+# (e.g. 2.48.2.27); require a resolution that also installs on Apple Silicon.
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+]
+
+[tool.uv.extra-build-dependencies]
+# earth2grid builds a torch C++ extension; resolving it only needs its metadata.
+earth2grid = ["setuptools", "torch"]
+
+[tool.ruff]
+# Pinned here so local runs and CI resolve the same settings.
+line-length = 100
+extend-exclude = ["presentation/node_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501"]  # long strings/comments are common in the CF metadata
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

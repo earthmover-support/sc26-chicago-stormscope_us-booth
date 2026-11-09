@@ -1,0 +1,14 @@
+.venv
+.DS_Store
+.ipynb_checkpoints
+outputs
+.env
+secrets/
+__pycache__
+
+node_modules
+presentation/web/vendor
+.vercel
+*.mp4
+presentation/offline
+
