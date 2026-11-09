@@ -710,3 +710,4 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .al-link { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--em-lav); color: #fff; font-size: 16px; font-weight: 500; text-decoration: none; }
 .al-link:hover { background: rgba(195, 150, 249, .12); }
 .al-link img { width: 24px; height: 24px; }
+.facts ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; list-style: circle; }
