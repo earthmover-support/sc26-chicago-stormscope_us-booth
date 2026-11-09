@@ -69,7 +69,7 @@ uv run coiled run --workspace earthmover-devs --region us-east-1 --ami-version D
   --vm-type p5.4xlarge --vm-type g7e.8xlarge --vm-type g7e.4xlarge --vm-type g7e.2xlarge \
   --vm-type g6e.8xlarge --vm-type g6e.4xlarge \
   --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
-  --docker-shm-size "1 GiB" --file scripts/ --detach \
+  --docker-shm-size "1 GiB" --file scripts/ --detach --keepalive 4h \
   -- bash scripts/coiled_bootstrap.sh --n-steps 3 --start-time 2026-11-09T19:00 --publish-target local
 ```
 
@@ -79,8 +79,28 @@ on a `g7e` the kernel logs `NVRM: ... requires use of the NVIDIA open kernel mod
 and `nvidia-smi` finds no devices. The `DL` AMI (Deep Learning Base OSS Nvidia Driver)
 works on all GPU types.
 
+**Pass `--keepalive`** (for example `4h`). With `--detach` and no keepalive, Coiled stops
+the VM 10 ms after the command exits, and that GPU can be gone on the next launch. A
+later `coiled run` with the same `--name` reuses the running VM. Stop it with
+`uv run coiled cluster stop --workspace earthmover-devs <name>`.
+
+Do not attach to a run VM with `coiled.Cluster(name=...)`. If that VM has stopped, this
+call starts a new default Dask cluster (CPU only) under the same name.
+
 If AWS has no capacity or the quota is too low, Coiled returns an error such as
 `InsufficientInstanceCapacity` or `VcpuLimitExceeded`.
+
+## Inference timing log
+
+One row per pipeline run on a Coiled VM. The pipeline prints `timing:` (fetch, rollout
+plus write, commit) and `step times (<GPU>):`. Step 0 includes the `torch.compile` warmup,
+so "s/step" is the mean of steps 1 and later. Full CONUS, `3km_10min_flash`, 1 ensemble
+member.
+
+| Date (UTC) | Cluster | Instance | GPU | n_steps | Fetch s | Step 0 s | s/step | Commit s | Result |
+|---|---|---|---|---|---|---|---|---|---|
+| 2026-11-09 20:04 | 2352303 | g7e.8xlarge | RTX PRO 6000 Server | 3 | - | - | - | - | failed: default AMI has no open kernel modules, no GPU (fixed with `--ami-version DL`) |
+| 2026-11-09 20:20 | 2352426 | g7e.8xlarge | RTX PRO 6000 Server | 3 | - | - | - | - | failed: bootstrap exited after the first pip install, cause not logged; VM stopped (no keepalive) |
 
 ## Sources
 

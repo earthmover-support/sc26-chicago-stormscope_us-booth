@@ -755,11 +755,16 @@ class StormScopeUSPipeline:
         else:
             extend_schema(backend, coords["time"], lead_time, output_grid(self.model)[0])
 
+        step_times = []  # wall time per yielded step; step 0 includes torch.compile warmup
+        t_step = time.monotonic()
         for step, (x_pred, coords_pred) in enumerate(
             tqdm(self.model.create_iterator(x, coords), total=n_steps + 1)
         ):
             # Non-blocking: the backend's thread pool uploads while the GPU computes.
             backend.write(*step_composites(self.model, x_pred, coords_pred, channels))
+            now = time.monotonic()
+            step_times.append(now - t_step)
+            t_step = now
             if step == n_steps:
                 break
         t_roll = time.monotonic() - t0 - t_fetch
@@ -776,6 +781,8 @@ class StormScopeUSPipeline:
             f"timing: fetch {t_fetch:.1f}s, rollout+write {t_roll:.1f}s, "
             f"commit {t_total - t_fetch - t_roll:.1f}s, total {t_total:.1f}s"
         )
+        gpu = torch.cuda.get_device_name(self.device) if self.device.type == "cuda" else "cpu"
+        print(f"step times ({gpu}): " + ", ".join(f"{t:.2f}s" for t in step_times))
         print(f"Published to {publish_target} ({location})")
 
 
