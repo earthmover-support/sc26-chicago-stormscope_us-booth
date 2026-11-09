@@ -38,13 +38,46 @@ Coiled also lists multi-GPU sizes of `g6e` (4x/8x L40S) and `g7e` (2x/4x/8x RTX 
 - **Single-GPU candidates**, from fastest to cheapest: `p5.4xlarge` (H100),
   `g7e.*` (RTX PRO 6000 Server, Blackwell, 96 GB), `g6e.*` (L40S, 48 GB).
 
-## Test availability
+## Single-GPU types below $10/h
 
-Start a VM, run `nvidia-smi`, and stop the VM:
+The pipeline uses one GPU. From fastest to slowest (us-east-1 on-demand $/h):
+
+| GPU | Instances ($/h) |
+|---|---|
+| H100 80 GB | `p5.4xlarge` (6.88) |
+| RTX PRO 6000 Server 96 GB (Blackwell) | `g7e.2xlarge` (3.36), `g7e.4xlarge` (4.00), `g7e.8xlarge` (5.27) |
+| L40S 48 GB | `g6e.xlarge` (1.86), `g6e.2xlarge` (2.24), `g6e.4xlarge` (1.98), `g6e.8xlarge` (4.53), `g6e.16xlarge` (7.58) |
+| RTX PRO 4500 (Blackwell) | `g7.2xlarge` (2.52), `g7.8xlarge` (4.09) |
+| A10G 24 GB, L4 24 GB, T4, V100 | `g5`, `g6`, `g4dn`, `p3`: too slow or too little memory for this model |
+
+**Capacity on 2026-11-09:** `p5.4xlarge` returned `InsufficientInstanceCapacity` in
+every us-east-1 zone (a to f), in two tries.
+
+## Run on Coiled
+
+See [Coiled GPU clusters](https://docs.coiled.io/user_guide/clusters/gpu.html). Use the
+`earthmover-devs` workspace. Its default region is us-west-2, so always pass
+`--region us-east-1`.
+
+The Docker image is not in a registry. `scripts/coiled_bootstrap.sh` starts from the
+public NGC base image, repeats the Dockerfile's pip installs, and then runs the pipeline.
+Give several `--vm-type` options, fastest first. Coiled uses the next one if AWS has no
+capacity:
 
 ```bash
-uv run coiled run --region us-east-1 --vm-type p5.4xlarge -- nvidia-smi
+uv run coiled run --workspace earthmover-devs --region us-east-1 --ami-version DL \
+  --vm-type p5.4xlarge --vm-type g7e.8xlarge --vm-type g7e.4xlarge --vm-type g7e.2xlarge \
+  --vm-type g6e.8xlarge --vm-type g6e.4xlarge \
+  --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
+  --docker-shm-size "1 GiB" --file scripts/ --detach \
+  -- bash scripts/coiled_bootstrap.sh --n-steps 3 --start-time 2026-11-09T19:00 --publish-target local
 ```
+
+**Always pass `--ami-version DL`.** Blackwell GPUs (`g7e`, `g7`, B200, B300) work only
+with NVIDIA's open kernel modules. Coiled's default AMI has the proprietary driver, so
+on a `g7e` the kernel logs `NVRM: ... requires use of the NVIDIA open kernel modules`
+and `nvidia-smi` finds no devices. The `DL` AMI (Deep Learning Base OSS Nvidia Driver)
+works on all GPU types.
 
 If AWS has no capacity or the quota is too low, Coiled returns an error such as
 `InsufficientInstanceCapacity` or `VcpuLimitExceeded`.

@@ -8,7 +8,7 @@ delete them when done.
 - [ ] Clean IR colour table (`CLEAN_IR_TABLE` in `scripts/stormscope_us_pipeline.py`): grey from +40 °C to −30 °C, then light blue −30 / blue −40 / green −50 / yellow −60 / red −70 / dark red −80 / white −90 °C. OK, or name a specific one, e.g. NOAA/CIMSS "Rainbow IR" or the AVN enhancement? Judge it on a real run.
 - [ ] True colour recipe: is CIMSS natural true colour (synthetic green 0.45·C02 + 0.10·C03 + 0.45·C01, gamma 2.2) OK? Judge it on a real run.
 - [ ] Booth copy on panels 03 and 05 (`presentation/web/index.html`): the GPU model ("NVIDIA GPU", was "H200") and the data-flow stage latencies (TBD until measured).
-- [ ] Run every 5 min instead of 10? GOES-19 scans CONUS every 5 min (see Candidates in `docs/END2END_NEARREALTIME_PERFORMANCE.md`).
+- [ ] Cadence for a new forecast: every 5 min (each time new GOES-19 CONUS data lands) or every 10 min (current)? See Candidates in `docs/END2END_NEARREALTIME_PERFORMANCE.md`.
 
 ## To fix / provide
 
@@ -19,7 +19,7 @@ delete them when done.
 - [ ] Read-only Arraylake token for the hosted presentation (Vercel env).
 - [ ] GPU host to run the pipeline (CUDA, NVIDIA Container Toolkit, NGC login if needed). Pick the instance type in us-east-1 (B200 = `p6-b200.48xlarge`, 8 GPUs only, ~$114/h on-demand; 1x H100 `p5.4xlarge` ~$6.88/h) and check the EC2 GPU quota / Capacity Block for the booth days.
 - [ ] `ARRAYLAKE_API_TOKEN` with write access to `nvidia/sc26-chicago-stormscope_us-booth`.
-- [ ] First GPU run: `docker compose up --build` has not been built or run yet (the Mac cannot build the CUDA image). Check the image build, the first model load, and `--region`. Then copy the printed `timing:` line into the baseline of `docs/END2END_NEARREALTIME_PERFORMANCE.md` and `run_phases_s` in `presentation/config.json` (currently estimates: ic 60 s, step 5 s, commit 6 s).
+- [ ] First GPU run: `docker compose up --build` has not been built or run yet (the Mac cannot build the CUDA image). Check the image build, the first model load, and `--region`. Then copy the printed `timing:` line into the baseline of `docs/END2END_NEARREALTIME_PERFORMANCE.md` and `run_phases_s` in `presentation/config.json` (currently estimates: ic 60 s, step 5 s, commit 6 s). Then drop the `[TO BE VERIFIED]` marker after the step time on panel 03 of `presentation/web/index.html`.
 
 ## Done
 
