@@ -92,9 +92,10 @@ sticks for the day. The page starts (and resets) on `true_color` while the sun i
    (`raster/rgb`, `colorscalerange` `0,255`). Add more under `variables` in `config.json`.
 5. **Run length**: the strip and scrubber show the observed +0 frame plus 12 steps,
    +10 to +120 min (`lead_steps`, `lead_step_min`). Keep the commit-message format in the
-   pipeline: `stormscope-us <init> ...`, one commit per init. `run_phases_s` are estimates
-   for the strip's countdown; replace them with measured values
-   ([END2END_NEARREALTIME_PERFORMANCE.md](../docs/END2END_NEARREALTIME_PERFORMANCE.md)).
+   pipeline: `stormscope-us <init> ...`, one commit per init. `run_phases_s` are the strip's
+   per-phase lengths, measured on an L40S on 2026-11-09 (fetch 5–7 s, 3.3–4.1 s per step,
+   commit 0.5–0.7 s; [GPU.md](../docs/GPU.md#inference-timing-log)). `run_interval_min` is
+   the init cadence, one per 5-min CONUS scan.
 6. `viewer_url` in `config.json` drives the first QR code on the last panel (slide 8).
 7. **Time zone**: every time on screen is shown in `timezone` (`config.json`,
    `America/Chicago`), whatever the booth machine or a hosted viewer's browser is set to.
