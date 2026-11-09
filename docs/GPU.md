@@ -93,14 +93,16 @@ If AWS has no capacity or the quota is too low, Coiled returns an error such as
 ## Inference timing log
 
 One row per pipeline run on a Coiled VM. The pipeline prints `timing:` (fetch, rollout
-plus write, commit) and `step times (<GPU>):`. Step 0 includes the `torch.compile` warmup,
-so "s/step" is the mean of steps 1 and later. Full CONUS, `3km_10min_flash`, 1 ensemble
+plus write, commit) and `step times (<GPU>):`. Step 0 returns the observed analysis frame and does not
+call the model. Step 1 is the first model step and includes the `torch.compile` warmup.
+"s/step" is the mean of steps 2 and later, the steady state. Full CONUS, `3km_10min_flash`, 1 ensemble
 member.
 
-| Date (UTC) | Cluster | Instance | GPU | n_steps | Fetch s | Step 0 s | s/step | Commit s | Result |
+| Date (UTC) | Cluster | Instance | GPU | n_steps | Fetch s | Step 1 s (warmup) | s/step | Commit s | Result |
 |---|---|---|---|---|---|---|---|---|---|
 | 2026-11-09 20:04 | 2352303 | g7e.8xlarge | RTX PRO 6000 Server | 3 | - | - | - | - | failed: default AMI has no open kernel modules, no GPU (fixed with `--ami-version DL`) |
 | 2026-11-09 20:20 | 2352426 | g7e.8xlarge | RTX PRO 6000 Server | 3 | - | - | - | - | failed: bootstrap exited after the first pip install, cause not logged; VM stopped (no keepalive) |
+| 2026-11-09 20:41 | 2352507 | g6e.8xlarge | L40S 48 GB | 3 | 7.0 | 18.4 | 3.9 | 0.0 | OK, local store; total 33.6 s; init 19:00 |
 
 ## Sources
 

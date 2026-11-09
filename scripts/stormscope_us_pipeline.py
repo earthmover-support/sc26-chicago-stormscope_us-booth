@@ -755,7 +755,7 @@ class StormScopeUSPipeline:
         else:
             extend_schema(backend, coords["time"], lead_time, output_grid(self.model)[0])
 
-        step_times = []  # wall time per yielded step; step 0 includes torch.compile warmup
+        step_times = []  # wall time per yielded step: 0 = analysis frame (no model call), 1 = + torch.compile warmup
         t_step = time.monotonic()
         for step, (x_pred, coords_pred) in enumerate(
             tqdm(self.model.create_iterator(x, coords), total=n_steps + 1)
