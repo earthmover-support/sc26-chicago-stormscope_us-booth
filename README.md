@@ -66,12 +66,7 @@ viewer pick it automatically while it is dark at the venue).
 
 The model needs a CUDA GPU. Install the GPU extra there (`uv sync --extra gpu`, with
 NATTEN's prebuilt wheels from <https://whl.natten.org/>; it also builds `earth2grid`) and
-run the [pipeline script](#pipeline-script). On a Mac, `uv sync` installs everything but
-NATTEN and earth2grid, enough for the tests:
-
-```bash
-uv run pytest      # composites, GOES slot logic, local Icechunk roundtrip; no GPU
-```
+run the [pipeline script](#pipeline-script).
 
 Credentials come from a local `.env` (see [`.env.example`](.env.example)):
 
