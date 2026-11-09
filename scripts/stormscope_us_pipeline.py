@@ -167,7 +167,9 @@ COMPOSITE_ATTRS = {
 # ============================================================================
 GOES_SATELLITE = "goes19"  # GOES-East, operational since 2025-04-07
 GOES_SCAN_MODE = "C"  # CONUS sector, one scan every 5 min
-SLOT_STEP = timedelta(minutes=10)  # model step, and the cadence of inits
+# Cadence of inits: every CONUS scan (5 min). The input frames stay 10 min apart (the
+# model's `frame_step`), so an init at hh:m5 reads the hh:m5, hh:m5-10, ... scans.
+SLOT_STEP = timedelta(minutes=5)
 SEARCH_LOOKBACK = timedelta(hours=2)  # how far back to hunt for a complete input window
 REALTIME_LAG = timedelta(minutes=30)  # blind fallback when the bucket cannot be listed
 # A slot is "available" once its MCMIPC file is listed in the bucket, so no fixed lag is
@@ -206,7 +208,7 @@ def scan_slot(start: datetime) -> datetime:
 def latest_complete_slot(
     slots: set[datetime], n_frames: int, frame_step: timedelta, not_after: datetime
 ) -> datetime:
-    """Newest 10-min slot <= `not_after` whose `n_frames` input frames are all present."""
+    """Newest 5-min slot <= `not_after` whose `n_frames` input frames are all present."""
     for slot in sorted(slots, reverse=True):
         if slot > not_after or slot != floor_to_slot(slot):
             continue
@@ -365,7 +367,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--start-time",
         default=None,
-        help="initial-condition time, ISO 8601 UTC on a 10-min boundary (e.g. "
+        help="initial-condition time, ISO 8601 UTC on a 5-min boundary (e.g. "
         "2026-11-16T18:00). Default: the freshest slot whose input window is in the "
         "noaa-goes19 bucket, falling back to REALTIME_LAG behind now if it can't be listed.",
     )
@@ -422,8 +424,8 @@ def parse_args() -> argparse.Namespace:
             p.error(f"--start-time {args.start_time!r} is not an ISO 8601 timestamp")
         if np.isnat(args.start_time):
             p.error("--start-time must be a real timestamp")
-        if args.start_time != np.datetime64(args.start_time, "10m"):
-            p.error(f"--start-time {args.start_time} must be on a 10-min boundary")
+        if args.start_time != np.datetime64(args.start_time, "5m"):
+            p.error(f"--start-time {args.start_time} must be on a 5-min boundary")
     if args.publish_target is None:
         # argparse does not check `choices` against an env-derived default
         args.publish_target = os.environ.get("STORMSCOPE_PUBLISH_TARGET", "local")

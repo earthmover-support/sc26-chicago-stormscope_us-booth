@@ -120,24 +120,25 @@ def test_scan_slot_maps_conus_start_to_slot():
 
 def test_floor_to_slot():
     when = datetime(2026, 11, 16, 18, 17, 59, tzinfo=UTC)
-    assert pl.floor_to_slot(when) == datetime(2026, 11, 16, 18, 10, tzinfo=UTC)
+    assert pl.floor_to_slot(when) == datetime(2026, 11, 16, 18, 15, tzinfo=UTC)
 
 
 def _slots(end: datetime, n: int) -> set[datetime]:
     return {end - i * timedelta(minutes=5) for i in range(n)}
 
 
-def test_latest_complete_slot_picks_newest_10min_slot():
-    end = datetime(2026, 11, 16, 18, 25, tzinfo=UTC)  # newest scan is on a :x5 slot
+def test_latest_complete_slot_picks_newest_5min_slot():
+    end = datetime(2026, 11, 16, 18, 25, tzinfo=UTC)  # inits every 5 min, also on :x5
     got = pl.latest_complete_slot(_slots(end, 20), 6, timedelta(minutes=10), end)
-    assert got == datetime(2026, 11, 16, 18, 20, tzinfo=UTC)
+    assert got == datetime(2026, 11, 16, 18, 25, tzinfo=UTC)
 
 
 def test_latest_complete_slot_skips_gaps():
     end = datetime(2026, 11, 16, 18, 20, tzinfo=UTC)
     slots = _slots(end, 20) - {datetime(2026, 11, 16, 17, 50, tzinfo=UTC)}
+    # 18:20 needs 17:50; 18:15 uses the other 5-min phase (18:15 ... 17:45), all present
     got = pl.latest_complete_slot(slots, 4, timedelta(minutes=10), end)
-    assert got == datetime(2026, 11, 16, 17, 40, tzinfo=UTC)
+    assert got == datetime(2026, 11, 16, 18, 15, tzinfo=UTC)
 
 
 def test_latest_complete_slot_respects_not_after():
@@ -145,7 +146,7 @@ def test_latest_complete_slot_respects_not_after():
     got = pl.latest_complete_slot(
         _slots(end, 20), 2, timedelta(minutes=10), end - timedelta(minutes=12)
     )
-    assert got == datetime(2026, 11, 16, 18, 0, tzinfo=UTC)
+    assert got == datetime(2026, 11, 16, 18, 5, tzinfo=UTC)
 
 
 def test_latest_complete_slot_raises_when_none():
