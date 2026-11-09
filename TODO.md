@@ -7,7 +7,6 @@ delete them when done.
 
 - [ ] Clean IR colour table (`CLEAN_IR_TABLE` in `scripts/stormscope_us_pipeline.py`): grey from +40 °C to −30 °C, then light blue −30 / blue −40 / green −50 / yellow −60 / red −70 / dark red −80 / white −90 °C. OK, or name a specific one, e.g. NOAA/CIMSS "Rainbow IR" or the AVN enhancement? Judge it on a real run; to discuss with colleagues.
 - [ ] True colour recipe: is CIMSS natural true colour (synthetic green 0.45·C02 + 0.10·C03 + 0.45·C01, gamma 2.2) OK? Judge it on a real run; to discuss with colleagues.
-
 - [ ] Cheaper GPU: the pipeline uses only ~11 GB of GPU memory. Benchmark `g6e.4xlarge` (same L40S, $1.98/h vs $4.53/h now), `g6e.xlarge`, `g6.xlarge` (L4, $0.80/h) and `g5.xlarge` (A10G), then pick one. L4/A10G would add ~1.5–2 min latency and break the "5 minutes" slide claim. TODO rows in [docs/GPU.md, Inference timing log](docs/GPU.md#inference-timing-log).
 
 ## Done
