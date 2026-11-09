@@ -183,8 +183,9 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .flow .frames span { flex: 1; height: 36px; border-radius: 0; background: #1E1E1E; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font: 12px var(--mono); color: #BDBDBD; }
 .flow .out-frames span { height: 30px; font-size: 11px; }
 .flow .arrow { text-align: center; color: var(--nv-green); font-size: 20px; line-height: 1; }
-.flow .engine { padding: 10px 14px; border-radius: 0; background: var(--nv-green); color: #000; display: flex; justify-content: space-between; align-items: center; }
-.flow .engine b { font-size: 18px; } .flow .engine span { font: 13px var(--mono); }
+.flow .engine { padding: 10px 14px; border-radius: 0; background: var(--nv-green); color: #000; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.flow .engine b, .flow .engine span { white-space: nowrap; }
+.flow .engine b { font-size: 16px; } .flow .engine span { font: 13px var(--mono); }
 .flow .out { display: flex; gap: 10px; align-items: center; font-size: 15px; color: #CFCFCF; }
 .flow .pill { padding: 10px 14px; border: 2px solid var(--nv-green); border-radius: 0; color: var(--nv-green); font: 600 14px var(--mono); flex-shrink: 0; }
 .facts { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: #CFCFCF; font-size: 16px; }
@@ -711,3 +712,6 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .al-link:hover { background: rgba(195, 150, 249, .12); }
 .al-link img { width: 24px; height: 24px; }
 .facts ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; list-style: circle; }
+
+/* breathing room between the nowcasting bullets and WHY IT MATTERS */
+.panels .panel .facts + .label { margin-top: 14px; }
