@@ -62,7 +62,7 @@
   <div class="head">
     <div>
       <div class="title">StormScope-US nowcast</div>
-      <div class="subtitle">GOES-19 ABI · Arraylake Flux tiles</div>
+      <div class="subtitle">GOES-19 ABI · Arraylake tiles</div>
     </div>
     <div class="links">
       <a href="https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth" title="Code on GitHub" target="_blank" rel="noopener">
@@ -93,12 +93,11 @@
 // MapLibre 6 ships ES modules only.
 import * as maplibregl from "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
 
-// Flux tiles service, docs.earthmover.io/compute/tiles#maplibremapbox
-// TODO: the nvidia org's Flux tiles service (see TODO.md)
-const FLUX = "https://tiles-dd7cd36ec0562874.compute.arraylake.app/v1/services/tiles/nvidia";
-// On Vercel (the only https host), go through the /flux rewrite in vercel.json so Vercel's CDN
+// Arraylake tiles service, docs.earthmover.io/compute/tiles#maplibremapbox
+const TILES = "https://tiles-dd7cd36ec0562874.compute.arraylake.app/v1/services/tiles/nvidia";
+// On Vercel (the only https host), go through the /tiles rewrite in vercel.json so Vercel's CDN
 // renders each tile once for all visitors; locally, straight to the service.
-const BASE = location.protocol === "https:" ? "/flux" : FLUX;
+const BASE = location.protocol === "https:" ? "/tiles" : TILES;
 const REPO = "sc26-chicago-stormscope_us-booth";
 const REF = "main";
 // The RGB composites are stored as uint8 bytes, hence one colour scale.

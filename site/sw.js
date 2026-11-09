@@ -1,4 +1,4 @@
-// Cache-first store for Flux tile responses. The tiles service sends branch tiles with
+// Cache-first store for tile responses. The tiles service sends branch tiles with
 // `max-age=0`, so without this every repeat tile goes back to the (slow) service.
 // A published init never changes: the pipeline adds it to `time` and writes all its leads
 // in a single commit, so a tile URL (branch, init, lead, variable, z/y/x) is immutable.

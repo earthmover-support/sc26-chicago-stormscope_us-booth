@@ -1,14 +1,14 @@
 # site
 
 A static MapLibre globe of the latest StormScope-US nowcasts over the contiguous US. Tiles
-come from the public Earthmover Flux tiles service of the `nvidia` org, branch `main`; on
+come from the public Arraylake tiles service of the `nvidia` org, branch `main`; on
 Vercel through a caching proxy. The page has an init selector, a true colour / Clean IR
 toggle, and playback over lead times. It starts on Clean IR while it is dark at the SC26
 venue. Playback holds the first frame until all leads have loaded. Every minute it checks
 for a new init, loads it in the background, and switches to it once it is complete. No
 build step and no server: `index.html`, `sw.js`, three logo SVGs and one Vercel function.
 
-The tiles service URL is `FLUX` in `index.html` and `api/flux.js`.
+The tiles service URL is `TILES` in `index.html` and `api/tiles.js`.
 
 ## Tile cache
 
@@ -23,20 +23,20 @@ Change `CACHE` in `sw.js` (`tiles-v1` → `tiles-v2`) and redeploy if tiles chan
 same URL: an init that was rerun, a reset branch, or a tiles service upgrade that renders
 differently. To clear it in one browser: DevTools → Application → Storage → Clear site data.
 
-Flux keeps no cache of rendered tiles, so every visitor's browser would make it render the
-same tiles of a run again. On Vercel (any `https:` origin) the page asks for `/flux/...`
-instead, which `vercel.json` rewrites to `api/flux.js`. That function (Node.js, pinned to
+The tiles service keeps no cache of rendered tiles, so every visitor's browser would make it render the
+same tiles of a run again. On Vercel (any `https:` origin) the page asks for `/tiles/...`
+instead, which `vercel.json` rewrites to `api/tiles.js`. That function (Node.js, pinned to
 `iad1`; move it next to the tiles service's region once known):
 
 - forwards only the page's two kinds of request (tiles and the `_meta` tree of this repo);
 - keeps successful responses in two caches: Vercel's CDN (per edge region and hostname) and
   the Runtime Cache, which every region and hostname share because the function always runs
   in one region. Tiles a day, the `_meta` init list 30 s. Errors such as a `504` are not cached;
-- merges concurrent misses that land on the same function instance into one Flux request;
+- merges concurrent misses that land on the same function instance into one tiles-service request;
 - tags tiles `tiles` and `init-<YYYYMMDDHHMM>`, so a rerun init can be cleared with
   `vercel cache invalidate --tag init-202611161800`. A redeploy empties the CDN cache too.
 
-Locally (`http:`) the page goes straight to Flux.
+Locally (`http:`) the page goes straight to the tiles service.
 
 ## Run locally
 

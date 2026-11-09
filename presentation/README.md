@@ -10,7 +10,7 @@ presentation/
   server.py        booth: stdlib HTTP server + Arraylake/SQL pollers (uv inline deps)
   booth.py         logic shared by server.py and api/: runs, commits, SQL, public config
   api/             hosted: Vercel Python functions for /api/config, /api/state, /api/sql;
-                   flux.js, the tile proxy
+                   tiles.js, the tile proxy
   requirements.txt hosted: the functions' dependencies
   vercel.json      hosted: build, output directory, function timeout
   config.json      everything tunable: tile service, variables, timings, station, SQL
@@ -59,9 +59,9 @@ sticks for the day. The page starts (and resets) on `true_color` while the sun i
 
 ## Before the event
 
-1. **Tiles**: the `nvidia` org's Flux tiles service (public, so browsers and phones
+1. **Tiles**: the `nvidia` org's Arraylake tiles service (public, so browsers and phones
    fetch tiles without a token) is `tiles-dd7cd36ec0562874.compute.arraylake.app`; its URL is
-   in `tile_base` (`config.json`), `api/flux.js` and `../site/` (see
+   in `tile_base` (`config.json`), `api/tiles.js` and `../site/` (see
    [Viz](../README.md#viz)). Each pod caches on its own and
    starts empty, so load the booth page once and let one run play before doors open.
 2. **Inits**: the page reads `nvidia/sc26-chicago-stormscope_us-booth` (root group). The
@@ -124,14 +124,14 @@ The same page, for internal sharing at an unlisted URL. Differences from the boo
   answer for a day.
 - **No pollers.** `/api/state` reads commits and the `time` coordinate on each request and
   the CDN caches it for 5 s with stale-while-revalidate.
-- **Tiles go through a caching proxy.** `/api/config` answers `tile_base: /flux/<repo>`, and
-  `vercel.json` rewrites `/flux/*` to `api/flux.js` (Node.js, pinned to `iad1`; move it next
+- **Tiles go through a caching proxy.** `/api/config` answers `tile_base: /tiles/<repo>`, and
+  `vercel.json` rewrites `/tiles/*` to `api/tiles.js` (Node.js, pinned to `iad1`; move it next
   to the tiles service's region once that is known). It forwards only this repo's tiles
   (branch or snapshot id) and keeps successful ones for a day in Vercel's CDN and in the
   Runtime Cache, so viewers share one render per tile. Errors such as a `504` are not
   cached. Tiles are tagged `tiles` and `init-<YYYYMMDDHHMM>`
   (`vercel cache invalidate --tag ...`). The booth's `server.py` fetches tiles straight
-  from Flux.
+  from the tiles service.
 - **Windows smaller than 1920 × 1080** show the booth layout zoomed down to fit.
 - The vendored libraries are copied into `web/vendor/` at build time (`npm run vendor`).
 

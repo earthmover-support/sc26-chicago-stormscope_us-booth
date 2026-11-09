@@ -20,7 +20,7 @@ change is known separately. Update the `current` column only from a logged measu
 | 3 | Pickup | The pipeline lists the bucket every `--wait-seconds` (default 15 s) and starts on the newest 10-min slot whose 6 input frames (`T`-50 … `T`) are all listed. | ≤ 15 s | | |
 | 4 | Download + regrid | `fetch_data` pulls 6 MCMIPC files (only the newest is new per cycle; the others are in the earth2studio cache) and the model regrids them from the GOES fixed grid to the 3 km HRRR grid (nearest neighbour). One new timestamp from us-east-1: raw S3 GET of the 56 MB file 0.57 s (~99 MB/s); Earth2Studio `GOES` list + download + decode of the 8 channels 1.2 s (median, max 1.5 s). Regrid not yet measured. | download 1.2 s; regrid TBD | | |
 | 5 | Inference + ingest | StormScopeGOES Flash rolls forward 12 × 10 min. Each step's `true_color` / `clean_ir` composites upload to Icechunk in the background while the next step runs; one commit after the last step publishes the whole init. The pipeline prints `timing: fetch …, rollout+write …, commit …` per run. | TBD | | |
-| 6 | Visible to tiles service | Flux reads Icechunk directly, so a commit is renderable as soon as it lands. | 0 s | | |
+| 6 | Visible to tiles service | The tiles service reads Icechunk directly, so a commit is renderable as soon as it lands. | 0 s | | |
 | 7 | Discovered by client | Booth page: `server.py` polls Arraylake every 5 s, the browser polls `/api/state` every 4 s. Phone viewer: re-reads the init list every 60 s. | ≤ 9 s (phone ≤ 60 s) | | |
 | 8 | First frame rendered | Tiles service renders the home-view tiles of lead 0. | TBD | | depends on the `nvidia` tiles service region and replicas |
 | 9 | Full run rendered | All 13 leads loaded in one browser, 3 leads in flight. | TBD | | |

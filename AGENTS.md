@@ -16,7 +16,7 @@ Booth demo for SC26 Chicago (McCormick Place, 2026-11-15/20): run StormScope-US
 (`StormScopeGOES`, `3km_10min_flash`, earth2studio 0.20.0) on GOES-19 ABI CONUS data,
 stream each forecast step into Icechunk on Arraylake
 (`nvidia/sc26-chicago-stormscope_us-booth`), and show the latest run on a booth screen and
-a phone viewer through the Earthmover Flux tiles service. US only; nothing of the EU setup
+a phone viewer through the Arraylake tiles service. US only; nothing of the EU setup
 is kept besides its structure.
 
 ## File tree

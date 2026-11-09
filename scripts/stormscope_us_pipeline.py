@@ -299,7 +299,7 @@ ZARR_CONVENTIONS = [
     },
 ]
 
-# `grid_mapping` is what the Flux tiles service projects with; `coordinates` makes
+# `grid_mapping` is what the Arraylake tiles service projects with; `coordinates` makes
 # `xr.open_zarr` read lat/lon/valid_time back as coordinates of every field.
 GEOREF = {"coordinates": "lat lon valid_time", "grid_mapping": GRID_MAPPING}
 PUBLISH_TARGETS = ["local", "arraylake"]

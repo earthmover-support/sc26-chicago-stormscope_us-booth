@@ -1,24 +1,23 @@
-// Proxy to the Flux tiles service so each tile is rendered once for every visitor.
+// Proxy to the Arraylake tiles service so each tile is rendered once for every visitor.
 //
 // Two caches: Vercel's CDN (per edge region, keyed by hostname too) and the Runtime Cache
 // here. The function always runs in iad1, so the Runtime Cache is one copy shared by every
-// region and hostname. Concurrent misses on one instance share a single Flux request.
+// region and hostname. Concurrent misses on one instance share a single tiles-service request.
 // Only successful responses are cached: a 504 from a busy service must not stick.
 // Tiles of a listed init never change; the init list (`_meta`) changes every 10 min.
 // Clear a rerun with `vercel cache invalidate --tag init-<YYYYMMDDHHMM>` (or `tiles`).
 import { getCache } from "@vercel/functions";
 
-// TODO: the nvidia org's Flux tiles service (see TODO.md)
-const FLUX = "https://tiles-dd7cd36ec0562874.compute.arraylake.app/v1/services/tiles/nvidia";
+const TILES = "https://tiles-dd7cd36ec0562874.compute.arraylake.app/v1/services/tiles/nvidia";
 const REPO = "sc26-chicago-stormscope_us-booth";
 // Only what the page requests: an unchecked path with `..` would reach other services on the host.
 const ALLOWED = new RegExp(`^(${REPO}/main/tiles/WebMercatorQuad/\\d+/\\d+/\\d+|_meta/datasets/${REPO}/main/tree)$`);
 
-const cache = getCache({ namespace: "flux" });
+const cache = getCache({ namespace: "tiles" });
 const inflight = new Map(); // key -> Promise of { status, type, body (base64) }
 
-async function fromFlux(key, ttl, tags) {
-  const res = await fetch(`${FLUX}/${key}`);
+async function fromTiles(key, ttl, tags) {
+  const res = await fetch(`${TILES}/${key}`);
   const out = {
     status: res.status,
     type: res.headers.get("content-type"),
@@ -44,15 +43,15 @@ export async function GET(req) {
   let out = await cache.get(key).catch(() => null);
   if (!out) {
     state = inflight.has(key) ? "joined" : "miss";
-    if (state === "miss") inflight.set(key, fromFlux(key, ttl, tags).finally(() => inflight.delete(key)));
+    if (state === "miss") inflight.set(key, fromTiles(key, ttl, tags).finally(() => inflight.delete(key)));
     try {
       out = await inflight.get(key);
     } catch (e) {
-      return new Response(`flux: ${e.message}`, { status: 502 });
+      return new Response(`tiles: ${e.message}`, { status: 502 });
     }
   }
 
-  const headers = { "content-type": out.type, "cache-control": "public, max-age=0", "x-flux-proxy-cache": state };
+  const headers = { "content-type": out.type, "cache-control": "public, max-age=0", "x-tiles-proxy-cache": state };
   if (out.status < 300) {
     headers["Vercel-CDN-Cache-Control"] = `max-age=${ttl}`;
     headers["Vercel-Cache-Tag"] = tags.join(",");

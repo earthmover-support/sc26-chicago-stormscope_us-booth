@@ -9,7 +9,7 @@
       "maxDuration": 60,
       "excludeFiles": "{node_modules/**,web/**,server.py}"
     },
-    "api/flux.js": {
+    "api/tiles.js": {
       "regions": [
         "iad1"
       ]
@@ -17,8 +17,8 @@
   },
   "rewrites": [
     {
-      "source": "/flux/:path*",
-      "destination": "/api/flux?path=:path*"
+      "source": "/tiles/:path*",
+      "destination": "/api/tiles?path=:path*"
     }
   ]
 }
