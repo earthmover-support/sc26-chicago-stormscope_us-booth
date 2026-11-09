@@ -1,0 +1,56 @@
+{
+  "org": "nvidia",
+  "repo": "nvidia/sc26-chicago-stormscope_us-booth",
+  "branch": "main",
+
+  "tile_base": "https://TODO-tiles-host.compute.arraylake.app/v1/services/TODO-tiles/nvidia/sc26-chicago-stormscope_us-booth",
+  "data_bounds": [-133.712, 21.582, -61.337, 52.145],
+  "max_tile_level": 7,
+
+  "variables": {
+    "true_color": { "style": "raster/rgb", "colorscalerange": "0,255" },
+    "clean_ir":   { "style": "raster/rgb", "colorscalerange": "0,255" }
+  },
+
+  "lead_steps": 12,
+  "lead_step_min": 10,
+  "run_interval_min": 10,
+  "run_phases_s": { "ic": 60, "step": 5, "commit": 6 },
+  "max_runs": 144,
+  "poll_seconds": 5,
+  "history_depth": 120,
+
+  "panel_seconds": 25,
+  "playback_speed": "slow",
+  "hold_ms": 4000,
+  "attract_reset_s": 180,
+  "timezone": "America/Chicago",
+
+  "station": { "name": "SC26 · McCormick Place", "lat": 41.8517, "lon": -87.6167 },
+  "camera": { "lon": -96.0, "lat": 38.5, "zoom": 3.3, "pitch": 32, "sway_deg": 10, "sway_period_s": 120,
+              "cover": [-125, 24, -67, 50], "min_zoom": 2, "max_zoom": 8.5, "idle_reset_s": 30 },
+
+  "viewer_url": "https://TODO-viewer-url.example/",
+  "qr_tile": { "z": 5, "x": 8, "y": 11, "size": 512 },
+
+  "sql": {
+    "host": "",
+    "max_rows": 200,
+    "box_deg": 0.05,
+    "places": {
+      "SC26 Chicago":   [41.8517, -87.6167],
+      "GTC DC":         [38.8936, -77.0311],
+      "AGU26 SF":       [37.7842, -122.4016],
+      "AMS 2027 Denver": [39.7427, -104.9963],
+      "GTC San Jose":   [37.3297, -121.8889]
+    },
+    "query": [
+      "SELECT lead_time, AVG(true_color) AS brightness  -- high means cloudy, low means clear or dark",
+      "FROM \"sc26-chicago-stormscope_us-booth\".\"root\"",
+      "WHERE time = TIMESTAMP '{init}'  -- UTC",
+      "  AND lat BETWEEN {lat} - {box} AND {lat} + {box}",
+      "  AND lon BETWEEN {lon} - {box} AND {lon} + {box}",
+      "GROUP BY lead_time ORDER BY lead_time;"
+    ]
+  }
+}
