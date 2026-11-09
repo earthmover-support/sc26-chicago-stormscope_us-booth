@@ -66,7 +66,7 @@ sticks for the day. The page starts (and resets) on `true_color` while the sun i
    starts empty, so load the booth page once and let one run play before doors open.
 2. **Inits**: the page reads `nvidia/sc26-chicago-stormscope_us-booth` (root group). The
    pipeline appends every run's init to `time` and never drops one; the page offers the
-   newest 144, the past 24 h (`max_runs`). The server re-reads the `time` coordinate
+   newest 288, the past 24 h at one run per 5 min (`max_runs`). The server re-reads the `time` coordinate
    whenever `main` moves, and each tile picks its frame with `time=` + `lead_time=` on the
    newest snapshot holding that run, so the browser can cache it. The server finds each
    run's snapshot from commit messages like `stormscope-us 2026-11-16T18:00 lead 0-120 min`.
