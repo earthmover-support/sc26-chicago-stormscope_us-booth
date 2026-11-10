@@ -37,7 +37,7 @@
     frame: 0,
     animPaused: false,
     loop: true, // false: play to the last lead, then pause
-    speed: "slow",
+    speed: "medium",
     panel: 0,
     rotatePaused: false,
     manualUntil: 0,
