@@ -7,13 +7,13 @@ delete them when done.
 
 - [ ] Clean IR colour table (`CLEAN_IR_TABLE` in `scripts/stormscope_us_pipeline.py`): grey from +40 °C to −30 °C, then light blue −30 / blue −40 / green −50 / yellow −60 / red −70 / dark red −80 / white −90 °C. OK, or name a specific one, e.g. NOAA/CIMSS "Rainbow IR" or the AVN enhancement? Judge it on a real run; to discuss with colleagues.
 - [ ] True colour recipe: is CIMSS natural true colour (synthetic green 0.45·C02 + 0.10·C03 + 0.45·C01, gamma 2.2) OK? Judge it on a real run; to discuss with colleagues.
-- [ ] Cheaper GPU: the pipeline uses only ~11 GB of GPU memory. `g6e.4xlarge` measured: same speed as `g6e.8xlarge` at $1.98/h, now the default. Still to benchmark: `g6e.2xlarge`, `g6e.xlarge`, `g6.xlarge` (L4, $0.80/h) and `g5.xlarge` (A10G), then pick one. L4/A10G would add ~1.5–2 min latency and break the "5 minutes" slide claim. TODO rows in [docs/GPU.md, Inference timing log](docs/GPU.md#inference-timing-log).
+- [ ] Cheaper GPU: the pipeline uses only ~11 GB of GPU memory. `g6e.4xlarge` measured: same speed as `g6e.8xlarge` at $3.00/h (−34%), now the default; `g6e.2xlarge` ($2.24/h) would be cheaper if as fast. Still to benchmark: `g6e.2xlarge`, `g6e.xlarge`, `g6.xlarge` (L4, $0.80/h) and `g5.xlarge` (A10G), then pick one. L4/A10G would add ~1.5–2 min latency and break the "5 minutes" slide claim. TODO rows in [docs/GPU.md, Inference timing log](docs/GPU.md#inference-timing-log).
 
 ## Done
 
 - [x] Vercel projects and domains (created by Earthmover colleagues): hosted presentation `nvidia-sc26-chicago.earthmover.io` (project `sc26-chicago-stormscope-us-booth`), mobile viewer `nvidia-sc26-chicago-viewer.earthmover.io` (project `sc26-chicago-stormscope-us-booth-site`). `viewer_url` set in `presentation/config.json`; both Vercel proxies pinned to `iad1`, next to the us-east-1 tiles service.
 - [x] Read-only Arraylake token for the hosted presentation sent to the colleagues setting up Vercel (env `ARRAYLAKE_API_TOKEN`).
-- [x] GPU host: 1x NVIDIA L40S, default `g6e.4xlarge` ($1.98/h, same speed as the `g6e.8xlarge` used first), us-east-1, via Coiled cluster `stormscope-us-gpu`; see [docs/GPU.md](docs/GPU.md#default-deployment-g6e4xlarge). Deployment stopped for the GPU benchmark; restart with step 2 there.
+- [x] GPU host: 1x NVIDIA L40S, default `g6e.4xlarge` ($3.00/h, same speed as the `g6e.8xlarge` used first), us-east-1, via Coiled cluster `stormscope-us-gpu`; see [docs/GPU.md](docs/GPU.md#default-deployment-g6e4xlarge). Deployment stopped for the GPU benchmark; restart with step 2 there.
 - [x] First GPU run: 46–56 s per 12-step run (fetch ~6 s, ~4 s per step, commit ~1 s); in `run_phases_s`, panel 03 and stage 5 of `docs/END2END_NEARREALTIME_PERFORMANCE.md`.
 - [x] Cadence: a new forecast every 5 min (`run_interval_min: 5`).
 - [x] Booth copy on panels 03 and 05: "NVIDIA L40S GPU · ~4 s per 10-minute step", inference + ingest "<1 min".

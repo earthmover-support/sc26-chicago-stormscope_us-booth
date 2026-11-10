@@ -47,7 +47,7 @@ The pipeline uses one GPU. From fastest to slowest (us-east-1 on-demand $/h):
 |---|---|
 | H100 80 GB | `p5.4xlarge` (6.88) |
 | RTX PRO 6000 Server 96 GB (Blackwell) | `g7e.2xlarge` (3.36), `g7e.4xlarge` (4.00), `g7e.8xlarge` (5.27) |
-| L40S 48 GB | `g6e.xlarge` (1.86), `g6e.2xlarge` (2.24), `g6e.4xlarge` (1.98), `g6e.8xlarge` (4.53), `g6e.16xlarge` (7.58) |
+| L40S 48 GB | `g6e.xlarge` (1.86), `g6e.2xlarge` (2.24), `g6e.4xlarge` (3.00), `g6e.8xlarge` (4.53), `g6e.16xlarge` (7.58) |
 | RTX PRO 4500 (Blackwell) | `g7.2xlarge` (2.52), `g7.8xlarge` (4.09) |
 | L4 24 GB | `g6.xlarge` (0.80) |
 | A10G 24 GB | `g5.xlarge` (1.01) |
@@ -57,7 +57,8 @@ The pipeline uses about 11 GB of GPU memory (Coiled metrics, L40S, 12-step run),
 every GPU with 16 GB or more fits. L4 and A10G have about 1/3 and 1/5 of the L40S's BF16
 compute; a 12-step forecast is estimated at 2-3 min on them (not measured), which still
 fits the 5-min cycle but adds 1.5-2 min of latency. The same L40S on a smaller instance
-(`g6e.4xlarge`, $1.98/h) costs 56% less than `g6e.8xlarge` at the same speed.
+(`g6e.4xlarge`, $3.00/h) costs 34% less than `g6e.8xlarge` at the same speed, and
+`g6e.2xlarge` ($2.24/h) and `g6e.xlarge` ($1.86/h) are cheaper still.
 
 **Capacity on 2026-11-09 (us-east-1):** capacity changes from minute to minute.
 
@@ -82,8 +83,10 @@ It skips the installs when they are already done on the VM.
 ### Default deployment: `g6e.4xlarge`
 
 **Default and most preferred instance: `g6e.4xlarge`** (1x L40S 48 GB, 16 vCPU / 128 GB,
-$1.98/h). It runs a forecast as fast as `g6e.8xlarge` (44.2 s against 45.0 s) at 44% of
-the price; see the timing log.
+$3.00/h). It runs a forecast as fast as `g6e.8xlarge` (44.2 s against 45.0 s) at 66% of
+the price; see the timing log. `g6e.2xlarge` ($2.24/h) is the same GPU for less; if its
+benchmark matches, it becomes the default. (A price of $1.98/h quoted here earlier for
+`g6e.4xlarge` was wrong: a mis-scraped number, not the on-demand price.)
 
 | | |
 |---|---|
@@ -180,8 +183,8 @@ member.
 | 2026-11-09 20:41 | 2352507 | g6e.8xlarge | L40S 48 GB | 3 | 7.0 | 18.4 | 3.9 | 0.0 | OK, local store; total 33.6 s; init 19:00 |
 | 2026-11-09 21:00 | 2352507 | g6e.8xlarge | L40S 48 GB | 12 | 6.8 | 9.2 | 3.7 (3.3 from step 4) | 0.7 | OK, Arraylake `nvidia/sc26-chicago-stormscope_us-booth` commit `EYATA1996D8V8D11KM3G`; total 55.7 s; init 20:30; same VM as the row above, so the compile cache was warm |
 | 2026-11-09 21:11–21:26 | 2352507 | g6e.8xlarge | L40S 48 GB | 12 | 3.3–6.4 | - | 3.4–4.0 (rollout+write 40.4–48.0 s / 12) | 0.5–0.7 | OK, continuous, inits 21:05–21:20 every 5 min; total 44.3–54.9 s; published ~6 min after slot time |
-| 2026-11-10 08:15–08:30 | 2355678 | g6e.4xlarge | L40S 48 GB | 12 | 3.7 | - | 3.3 (rollout+write 40.0 s / 12) | 0.6 | OK, benchmark, 4 live inits, mean of the last 3: total 44.2 s (first, cold compile cache: 62.2 s); $1.98/h, $0.024 per forecast; same speed as g6e.8xlarge (45.0 s) at 44% of the price |
-| TODO | | `g6e.2xlarge` | L40S 48 GB | 12 | | | | | to check: same GPU, 8 vCPU / 64 GB RAM, $2.24/h (more than g6e.4xlarge at $1.98/h) |
+| 2026-11-10 08:15–08:30 | 2355678 | g6e.4xlarge | L40S 48 GB | 12 | 3.7 | - | 3.3 (rollout+write 40.0 s / 12) | 0.6 | OK, benchmark, 4 live inits, mean of the last 3: total 44.2 s (first, cold compile cache: 62.2 s); $3.00/h, $0.037 per forecast; same speed as g6e.8xlarge (45.0 s) at 66% of the price |
+| TODO | | `g6e.2xlarge` | L40S 48 GB | 12 | | | | | to check: same GPU, 8 vCPU / 64 GB RAM, $2.24/h, cheaper than g6e.4xlarge ($3.00/h) |
 | TODO | | `g6e.xlarge` | L40S 48 GB | 12 | | | | | to check: same GPU, $1.86/h (−59%); 4 vCPU / 32 GB RAM may slow fetch or upload |
 | TODO | | `g6.xlarge` | L4 24 GB | 12 | | | | | to check: $0.80/h (−82%); estimated 2–2.5 min per forecast |
 | TODO | | `g5.xlarge` | A10G 24 GB | 12 | | | | | to check: $1.01/h (−78%); estimated 2–3 min per forecast |

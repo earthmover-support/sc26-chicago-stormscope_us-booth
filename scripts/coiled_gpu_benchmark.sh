@@ -90,7 +90,7 @@ done
 # Summary: mean of the last 3 `timing:` lines per instance type, with the us-east-1
 # on-demand price (instances.vantage.sh, 2026-11-09; see docs/GPU.md).
 price() { case "$1" in
-    g6e.8xlarge) echo 4.53;; g6e.4xlarge) echo 1.98;; g6e.2xlarge) echo 2.24;; g6e.xlarge) echo 1.86;;
+    g6e.8xlarge) echo 4.53;; g6e.4xlarge) echo 3.00;; g6e.2xlarge) echo 2.24;; g6e.xlarge) echo 1.86;;
     g6.xlarge) echo 0.80;; g5.xlarge) echo 1.01;; g7e.2xlarge) echo 3.36;; g7e.8xlarge) echo 5.27;;
     p5.4xlarge) echo 6.88;; *) echo "?";; esac; }
 echo
