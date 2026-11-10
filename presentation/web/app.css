@@ -189,6 +189,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .flow .out { display: flex; gap: 10px; align-items: center; font-size: 15px; color: #CFCFCF; }
 .flow .pill { padding: 10px 14px; border: 2px solid var(--nv-green); border-radius: 0; color: var(--nv-green); font: 600 14px var(--mono); flex-shrink: 0; }
 .facts { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: #CFCFCF; font-size: 16px; }
+.facts a { color: inherit; text-decoration: underline; text-decoration-color: var(--lime); text-underline-offset: 3px; }
 
 .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .steps li { display: flex; gap: 14px; align-items: center; padding: 8px 12px; background: var(--nv-card); border-radius: 0; }
