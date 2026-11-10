@@ -80,13 +80,14 @@ The Docker image is not in a registry. `scripts/coiled_bootstrap.sh` starts from
 public NGC base image, repeats the Dockerfile's pip installs, and then runs the pipeline.
 It skips the installs when they are already done on the VM.
 
-### Default deployment: `g6e.4xlarge`
+### Default deployment: `g6e.xlarge`
 
-**Default and most preferred instance: `g6e.4xlarge`** (1x L40S 48 GB, 16 vCPU / 128 GB,
-$3.00/h). It runs a forecast as fast as `g6e.8xlarge` (44.2 s against 45.0 s) at 66% of
-the price; see the timing log. `g6e.2xlarge` ($2.24/h) is the same GPU for less; if its
-benchmark matches, it becomes the default. (A price of $1.98/h quoted here earlier for
-`g6e.4xlarge` was wrong: a mis-scraped number, not the on-demand price.)
+**Default and most preferred instance: `g6e.xlarge`** (1x L40S 48 GB, 4 vCPU / 32 GB,
+$1.86/h, ~$45/day). It runs a forecast as fast as the bigger L40S sizes (45.5 s against
+44.2 s on `g6e.4xlarge` and 45.0 s on `g6e.8xlarge`) at 62% / 41% of their price; see the
+timing log. Only the first forecast after a start is slower (83.5 s; 4 vCPU slow the
+torch.compile warmup). (A price of $1.98/h quoted here earlier for `g6e.4xlarge` was
+wrong: a mis-scraped number; its on-demand price is $3.00/h.)
 
 | | |
 |---|---|
@@ -99,16 +100,17 @@ benchmark matches, it becomes the default. (A price of $1.98/h quoted here earli
 
 ### Step 1: get a GPU VM
 
-List `g6e.4xlarge` first, then fallbacks. Coiled uses the next one if AWS has no
+List `g6e.xlarge` first, then fallbacks. Coiled uses the next one if AWS has no
 capacity. If all are full, the command fails without starting a VM (no cost), so retry
-in a loop. The fallbacks below are the other L40S sizes (same speed), then faster and
-pricier GPUs:
+in a loop. The fallbacks below are the other L40S sizes (same speed, from cheapest), then
+faster and pricier GPUs:
 
 ```bash
 for n in $(seq 1 14); do
   uv run coiled run --workspace earthmover-devs --name stormscope-us-gpu --region us-east-1 \
     --ami-version DL --keepalive 4h --skip-ssd-mount \
-    --vm-type g6e.4xlarge --vm-type g6e.2xlarge --vm-type g6e.8xlarge --vm-type g6e.16xlarge \
+    --vm-type g6e.xlarge --vm-type g6e.2xlarge --vm-type g6e.4xlarge --vm-type g6e.8xlarge \
+    --vm-type g6e.16xlarge \
     --vm-type g7e.2xlarge --vm-type g7e.4xlarge --vm-type g7e.8xlarge --vm-type p5.4xlarge \
     --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
     --docker-shm-size "1 GiB" --file scripts/ --detach \
@@ -131,7 +133,7 @@ each new init:
 ```bash
 (set -a; . ./.env; set +a
  uv run coiled run --workspace earthmover-devs --name stormscope-us-gpu --region us-east-1 \
-   --ami-version DL --keepalive 4h --skip-ssd-mount --vm-type g6e.4xlarge \
+   --ami-version DL --keepalive 4h --skip-ssd-mount --vm-type g6e.xlarge \
    --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
    --docker-shm-size "1 GiB" --file scripts/ --detach \
    --env ARRAYLAKE_API_TOKEN="$ARRAYLAKE_API_TOKEN" \
