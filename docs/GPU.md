@@ -79,30 +79,34 @@ The Docker image is not in a registry. `scripts/coiled_bootstrap.sh` starts from
 public NGC base image, repeats the Dockerfile's pip installs, and then runs the pipeline.
 It skips the installs when they are already done on the VM.
 
-### Currently running (since 2026-11-09)
+### Default deployment: `g6e.4xlarge`
+
+**Default and most preferred instance: `g6e.4xlarge`** (1x L40S 48 GB, 16 vCPU / 128 GB,
+$1.98/h). It runs a forecast as fast as `g6e.8xlarge` (44.2 s against 45.0 s) at 44% of
+the price; see the timing log.
 
 | | |
 |---|---|
-| Cluster | `stormscope-us-gpu`, id 2352507, workspace `earthmover-devs` |
-| Instance | `g6e.8xlarge`, 1x L40S 48 GB, us-east-1, $4.53/h |
-| Job | continuous: a 12-step forecast per 5-min GOES scan, published to `nvidia/sc26-chicago-stormscope_us-booth` (since 21:10 UTC) |
+| Cluster name | `stormscope-us-gpu`, workspace `earthmover-devs` |
+| Status | stopped since 2026-11-10 ~06:20 UTC for the GPU benchmark. Ran continuously on a `g6e.8xlarge` (cluster 2352507) from 2026-11-09 21:10 UTC. |
+| Job | continuous: a 12-step forecast per 5-min GOES scan, published to `nvidia/sc26-chicago-stormscope_us-booth` |
 | Keepalive | 4 h after the command ends; the continuous loop does not end, so the VM runs until it is stopped |
 | Stop | `uv run coiled cluster stop --workspace earthmover-devs stormscope-us-gpu` |
 | Logs | `uv run coiled logs --workspace earthmover-devs --cluster stormscope-us-gpu --label none` |
 
 ### Step 1: get a GPU VM
 
-Give all single-GPU types under $10/h, fastest first. Coiled uses the next one if AWS
-has no capacity. If all are full, the command fails without starting a VM (no cost), so
-retry in a loop. This loop got the running VM on its first try:
+List `g6e.4xlarge` first, then fallbacks. Coiled uses the next one if AWS has no
+capacity. If all are full, the command fails without starting a VM (no cost), so retry
+in a loop. The fallbacks below are the other L40S sizes (same speed), then faster and
+pricier GPUs:
 
 ```bash
 for n in $(seq 1 14); do
   uv run coiled run --workspace earthmover-devs --name stormscope-us-gpu --region us-east-1 \
-    --ami-version DL --keepalive 4h \
-    --vm-type p5.4xlarge --vm-type g7e.8xlarge --vm-type g7e.4xlarge --vm-type g7e.2xlarge \
-    --vm-type g7e.12xlarge --vm-type g6e.16xlarge --vm-type g6e.8xlarge --vm-type g6e.4xlarge \
-    --vm-type g6e.2xlarge --vm-type g6e.xlarge \
+    --ami-version DL --keepalive 4h --skip-ssd-mount \
+    --vm-type g6e.4xlarge --vm-type g6e.2xlarge --vm-type g6e.8xlarge --vm-type g6e.16xlarge \
+    --vm-type g7e.2xlarge --vm-type g7e.4xlarge --vm-type g7e.8xlarge --vm-type p5.4xlarge \
     --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
     --docker-shm-size "1 GiB" --file scripts/ --detach \
     -- bash scripts/coiled_bootstrap.sh --n-steps 3 --start-time 2026-11-09T19:00 --publish-target local \
@@ -117,14 +121,14 @@ dependencies and warms the compile cache.
 
 ### Step 2: run continuously on that VM
 
-The same `--name` reuses the running VM. `--env` sends the Arraylake token from `.env`
+Use the instance type that step 1 got in `--vm-type`. The same `--name` reuses the running VM. `--env` sends the Arraylake token from `.env`
 to the VM; it is not stored anywhere. Without `--start-time` the pipeline loops and runs
 each new init:
 
 ```bash
 (set -a; . ./.env; set +a
  uv run coiled run --workspace earthmover-devs --name stormscope-us-gpu --region us-east-1 \
-   --ami-version DL --keepalive 4h --vm-type g6e.8xlarge \
+   --ami-version DL --keepalive 4h --skip-ssd-mount --vm-type g6e.4xlarge \
    --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
    --docker-shm-size "1 GiB" --file scripts/ --detach \
    --env ARRAYLAKE_API_TOKEN="$ARRAYLAKE_API_TOKEN" \
