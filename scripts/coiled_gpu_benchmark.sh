@@ -2,10 +2,12 @@
 # Benchmark the pipeline on several Coiled GPU instance types, one after another.
 #
 # Each instance type runs 4 live inits (one per 5-min GOES scan) and publishes them to
-# the Arraylake booth repo, then the VM stops: no --detach and no --keepalive, so Coiled
-# shuts the VM down when the command exits. `timeout` in the VM is a hard cap in case the
-# pipeline hangs. Results: logs/bench/<instance>.log and a summary table at the end
-# (mean of the last 3 inits; the first pays the torch.compile warmup).
+# the Arraylake booth repo, then the VM stops. The run uses --detach without --keepalive:
+# Coiled stops the VM 10 ms after the command exits. (Without --detach, Coiled tore the
+# cluster down before the command started, 2026-11-10.) `timeout` in the VM caps the
+# pipeline, and this script stops the cluster itself if it is still up after MAX_WAIT.
+# Results: logs/bench/<instance>.log (VM logs) and a summary table at the end (mean of
+# the last 3 inits; the first pays the torch.compile warmup).
 #
 #   bash scripts/coiled_gpu_benchmark.sh                      # default list below
 #   bash scripts/coiled_gpu_benchmark.sh g6.xlarge g5.xlarge  # only these
@@ -23,24 +25,56 @@ HARD_CAP=45m     # kill the pipeline after this, whatever happens
 TRIES=10         # launch attempts per instance type while AWS has no capacity
 mkdir -p logs/bench
 
+MAX_WAIT=$((50 * 60))  # seconds; local backstop after HARD_CAP
+
+state() {  # Coiled state of cluster id $1 (ready, stopped, error, ...)
+    uv run python -c "
+import coiled, sys
+with coiled.Cloud(workspace='earthmover-devs') as c:
+    print(c.cluster_details(int(sys.argv[1]), workspace='earthmover-devs')['current_state']['state'])
+" "$1" 2>/dev/null | tail -1
+}
+
 for vm in "${VM_TYPES[@]}"; do
     log="logs/bench/${vm}.log"
+    launch="logs/bench/${vm}.launch.log"
+    id=""
     for try in $(seq 1 $TRIES); do
         echo "$(date -u +%H:%M:%SZ) ${vm}: launch try ${try}" | tee -a logs/bench/progress.log
         uv run coiled run --workspace earthmover-devs --name "stormscope-us-bench-${vm//./-}" \
             --region us-east-1 --ami-version DL --vm-type "$vm" \
             --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
-            --docker-shm-size "1 GiB" --file scripts/ \
+            --docker-shm-size "1 GiB" --file scripts/ --detach \
             --env ARRAYLAKE_API_TOKEN="$ARRAYLAKE_API_TOKEN" \
             -- timeout "$HARD_CAP" bash scripts/coiled_bootstrap.sh --n-steps 12 \
                --max-runs "$RUNS" --publish-target arraylake \
                --arraylake-repo nvidia/sc26-chicago-stormscope_us-booth \
-            > "$log" 2>&1
-        grep -q "InsufficientInstanceCapacity" "$log" || break
-        echo "$(date -u +%H:%M:%SZ) ${vm}: no capacity, retry in 2 min" | tee -a logs/bench/progress.log
-        sleep 120
+            > "$launch" 2>&1
+        id=$(sed 's/\x1b\[[0-9;]*m//g' "$launch" | grep -oE "clusters/[0-9]+" | head -1 | cut -d/ -f2)
+        if sed 's/\x1b\[[0-9;]*m//g' "$launch" | grep -qE "VM Type: +[a-z]"; then break; fi
+        if grep -q "InsufficientInstanceCapacity" "$launch"; then
+            echo "$(date -u +%H:%M:%SZ) ${vm}: no capacity, retry in 2 min" | tee -a logs/bench/progress.log
+            id=""; sleep 120; continue
+        fi
+        echo "$(date -u +%H:%M:%SZ) ${vm}: launch failed (cluster ${id:-none}), see ${launch}" | tee -a logs/bench/progress.log
+        id=""; break
     done
-    echo "$(date -u +%H:%M:%SZ) ${vm}: finished" | tee -a logs/bench/progress.log
+    if [ -n "$id" ]; then
+        echo "$(date -u +%H:%M:%SZ) ${vm}: running as cluster ${id}" | tee -a logs/bench/progress.log
+        start=$(date +%s)
+        while true; do
+            sleep 60
+            st=$(state "$id")
+            case "$st" in stopped|error) break;; esac
+            if [ $(( $(date +%s) - start )) -gt $MAX_WAIT ]; then
+                echo "$(date -u +%H:%M:%SZ) ${vm}: still ${st} after ${MAX_WAIT}s, stopping it" | tee -a logs/bench/progress.log
+                uv run coiled cluster stop --workspace earthmover-devs "$id" >/dev/null 2>&1
+                break
+            fi
+        done
+        uv run coiled logs --workspace earthmover-devs --cluster "$id" --label none > "$log" 2>&1
+    fi
+    echo "$(date -u +%H:%M:%SZ) ${vm}: finished (cluster ${id:-none})" | tee -a logs/bench/progress.log
 done
 
 # Summary: mean of the last 3 `timing:` lines per instance type, with the us-east-1
