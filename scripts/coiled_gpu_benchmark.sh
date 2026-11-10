@@ -3,8 +3,9 @@
 #
 # Each instance type runs 4 live inits (one per 5-min GOES scan) and publishes them to
 # the Arraylake booth repo, then the VM stops. The run uses --detach without --keepalive:
-# Coiled stops the VM 10 ms after the command exits. (Without --detach, Coiled tore the
-# cluster down before the command started, 2026-11-10.) `timeout` in the VM caps the
+# Coiled stops the VM 10 ms after the command exits. --skip-ssd-mount: on g6e.4xlarge
+# with the DL AMI, formatting the local NVMe failed ("Device or resource busy"), /scratch
+# was missing and Coiled stopped the cluster (2026-11-10). `timeout` in the VM caps the
 # pipeline, and this script stops the cluster itself if it is still up after MAX_WAIT.
 # Results: logs/bench/<instance>.log (VM logs) and a summary table at the end (mean of
 # the last 3 inits; the first pays the torch.compile warmup).
@@ -44,7 +45,7 @@ for vm in "${VM_TYPES[@]}"; do
         uv run coiled run --workspace earthmover-devs --name "stormscope-us-bench-${vm//./-}" \
             --region us-east-1 --ami-version DL --vm-type "$vm" \
             --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
-            --docker-shm-size "1 GiB" --file scripts/ --detach \
+            --docker-shm-size "1 GiB" --file scripts/ --detach --skip-ssd-mount \
             --env ARRAYLAKE_API_TOKEN="$ARRAYLAKE_API_TOKEN" \
             -- timeout "$HARD_CAP" bash scripts/coiled_bootstrap.sh --n-steps 12 \
                --max-runs "$RUNS" --publish-target arraylake \

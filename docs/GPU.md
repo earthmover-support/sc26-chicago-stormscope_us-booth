@@ -145,6 +145,12 @@ the VM 10 ms after the command exits, and that GPU can be gone on the next launc
 later `coiled run` with the same `--name` reuses the running VM. Stop it with
 `uv run coiled cluster stop --workspace earthmover-devs <name>`.
 
+**Pass `--skip-ssd-mount`** on instances with a local NVMe SSD (`g6e`, `g6`, `g5`). On
+a `g6e.4xlarge` with the `DL` AMI, Coiled could not format the SSD (`mkfs.xfs: cannot
+open /dev/nvme1n1: Device or resource busy`), `/scratch` was missing, and the cluster
+stopped with "Software environment exited with error code 1" before the command ran
+(2026-11-10, twice). The `g6e.8xlarge` on 2026-11-09 mounted it without problems.
+
 Do not attach to a run VM with `coiled.Cluster(name=...)`. If that VM has stopped, this
 call starts a new default Dask cluster (CPU only) under the same name.
 
