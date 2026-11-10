@@ -176,7 +176,7 @@ member.
 | 2026-11-09 20:41 | 2352507 | g6e.8xlarge | L40S 48 GB | 3 | 7.0 | 18.4 | 3.9 | 0.0 | OK, local store; total 33.6 s; init 19:00 |
 | 2026-11-09 21:00 | 2352507 | g6e.8xlarge | L40S 48 GB | 12 | 6.8 | 9.2 | 3.7 (3.3 from step 4) | 0.7 | OK, Arraylake `nvidia/sc26-chicago-stormscope_us-booth` commit `EYATA1996D8V8D11KM3G`; total 55.7 s; init 20:30; same VM as the row above, so the compile cache was warm |
 | 2026-11-09 21:11–21:26 | 2352507 | g6e.8xlarge | L40S 48 GB | 12 | 3.3–6.4 | - | 3.4–4.0 (rollout+write 40.4–48.0 s / 12) | 0.5–0.7 | OK, continuous, inits 21:05–21:20 every 5 min; total 44.3–54.9 s; published ~6 min after slot time |
-| TODO | | `g6e.4xlarge` | L40S 48 GB | 12 | | | | | to check: same GPU, $1.98/h (−56%); expect ~44 s |
+| 2026-11-10 08:15–08:30 | 2355678 | g6e.4xlarge | L40S 48 GB | 12 | 3.7 | - | 3.3 (rollout+write 40.0 s / 12) | 0.6 | OK, benchmark, 4 live inits, mean of the last 3: total 44.2 s (first, cold compile cache: 62.2 s); $1.98/h, $0.024 per forecast; same speed as g6e.8xlarge (45.0 s) at 44% of the price |
 | TODO | | `g6e.xlarge` | L40S 48 GB | 12 | | | | | to check: same GPU, $1.86/h (−59%); 4 vCPU / 32 GB RAM may slow fetch or upload |
 | TODO | | `g6.xlarge` | L4 24 GB | 12 | | | | | to check: $0.80/h (−82%); estimated 2–2.5 min per forecast |
 | TODO | | `g5.xlarge` | A10G 24 GB | 12 | | | | | to check: $1.01/h (−78%); estimated 2–3 min per forecast |
