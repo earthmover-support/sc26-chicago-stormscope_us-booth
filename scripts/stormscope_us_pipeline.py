@@ -412,7 +412,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--wait-seconds",
         type=float,
-        default=15,
+        default=5,
         help="seconds to sleep before looking again when no new init is available or a pass failed",
     )
     p.add_argument(
