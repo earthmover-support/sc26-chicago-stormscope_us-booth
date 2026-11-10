@@ -44,7 +44,10 @@ Candidates, not yet measured:
 - `--region`: a smaller Flash domain (`set_domain`) for fewer pixels per step.
 - Co-locate GPU, Arraylake bucket and tiles service in us-east-1 (NOAA's bucket is in
   us-east-1 as well).
-- Fetch only the newest frame per cycle and keep the previous 5 regridded frames in memory.
+- Keep decoded GOES frames in memory between inits (`FrameCache`): `fetch_data` decodes
+  all 6 input files every init, although only the newest is new. With 5-min inits the
+  reused frames come from the init 10 min earlier, so frames are kept ~70 min by
+  timestamp. Expected to cut most of the ~6 s fetch to ~1.2 s; not measured yet.
 
 ## Sources and reproduce
 

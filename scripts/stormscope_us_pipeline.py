@@ -501,6 +501,46 @@ def output_grid(model) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     return y, x, lat.astype("float32"), lon.astype("float32")
 
 
+class FrameCache:
+    """Data source that keeps decoded frames in memory between inits.
+
+    `fetch_data` calls its source once per input lead time, so without this every init
+    reopens and decodes all `n_frames` files (from earth2studio's disk cache) although
+    only the newest is new. Inits run every 5 min with frames 10 min apart, so an init
+    shares its older frames with the init 10 min before it, not 5: frames are kept by
+    timestamp for `keep` after the newest one seen. Frames are stored as float32 (the
+    model input dtype). A file NOAA rewrites in place is not reread; MCMIPC files are not
+    rewritten.
+    """
+
+    def __init__(self, source, keep: timedelta):
+        self.source = source
+        self.keep = np.timedelta64(int(keep.total_seconds()), "s")
+        self.frames = {}  # (datetime64[ns], variables) -> DataArray with one time
+        self.hits = self.misses = 0
+
+    def __call__(self, time, variable):
+        times = np.atleast_1d(np.asarray(time, dtype="datetime64[ns]"))
+        variables = tuple(str(v) for v in np.atleast_1d(variable))
+        parts = []
+        for t in times:
+            key = (t, variables)
+            if key in self.frames:
+                self.hits += 1
+            else:
+                self.misses += 1
+                self.frames[key] = self.source(np.array([t]), list(variables)).astype("float32")
+            parts.append(self.frames[key])
+        newest = max(t for t, _ in self.frames)
+        for key in [k for k in self.frames if k[0] < newest - self.keep]:
+            del self.frames[key]
+        if len(parts) == 1:
+            return parts[0]
+        import xarray as xr
+
+        return xr.concat(parts, dim="time")
+
+
 def fetch_initial_condition(model, goes, start_time: np.datetime64, device):
     """Fetch the GOES input window ending at `start_time` (raw GOES grid; the model
     interpolates onto its own grid in `prep_input`)."""
@@ -734,7 +774,9 @@ class StormScopeUSPipeline:
             self.device = torch.device(device)
         self.region = region
         self.model = load_model(self.device, region)
-        self.goes = GOES(satellite=GOES_SATELLITE, scan_mode=GOES_SCAN_MODE)
+        # Keep each frame until the init 10 min later has reused it (+10 min margin).
+        keep = self.n_frames * self.frame_step + timedelta(minutes=10)
+        self.goes = FrameCache(GOES(satellite=GOES_SATELLITE, scan_mode=GOES_SCAN_MODE), keep)
 
     @property
     def n_frames(self) -> int:
@@ -750,6 +792,7 @@ class StormScopeUSPipeline:
         """Run one nowcast from `start_time` and publish it in one commit."""
         os.makedirs(output_dir, exist_ok=True)
         t0 = time.monotonic()
+        hits, misses = self.goes.hits, self.goes.misses
 
         with torch.no_grad():
             x, coords = fetch_initial_condition(self.model, self.goes, start_time, self.device)
@@ -789,7 +832,8 @@ class StormScopeUSPipeline:
         print(f"{message} -> {snapshot}")
         print(
             f"timing: fetch {t_fetch:.1f}s, rollout+write {t_roll:.1f}s, "
-            f"commit {t_total - t_fetch - t_roll:.1f}s, total {t_total:.1f}s"
+            f"commit {t_total - t_fetch - t_roll:.1f}s, total {t_total:.1f}s; "
+            f"frames: {self.goes.hits - hits} from memory, {self.goes.misses - misses} read"
         )
         gpu = torch.cuda.get_device_name(self.device) if self.device.type == "cuda" else "cpu"
         print(f"step times ({gpu}): " + ", ".join(f"{t:.2f}s" for t in step_times))
