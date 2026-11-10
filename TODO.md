@@ -5,7 +5,7 @@ delete them when done.
 
 ## To fix
 
-- [ ] Hosted presentation token rejected (2026-11-10): `/api/state` on the Vercel project `sc26-chicago-stormscope-us-booth` gets `403 Access Denied` from `api.earthmover.io/repos/nvidia/sc26-chicago-stormscope_us-booth/open`. The repo itself is healthy and readable with other credentials, so the `ARRAYLAKE_API_TOKEN` set in Vercel has no read access to this repo (wrong principal, not in the `nvidia` org, or revoked). Mint a read-only token that can open the repo, ask the Earthmover colleagues to replace the Vercel env var, then redeploy (env changes need a redeploy).
+- [ ] Hosted presentation token rejected (2026-11-10): `/api/state` on the Vercel project `sc26-chicago-stormscope-us-booth` gets `401 Invalid token` (earlier `403 Access Denied`) from `api.earthmover.io/repos/nvidia/sc26-chicago-stormscope_us-booth/open`. The repo itself is healthy and readable with other credentials, so the `ARRAYLAKE_API_TOKEN` set in Vercel has no read access to this repo (wrong principal, not in the `nvidia` org, or revoked). Mint a read-only token that can open the repo, ask the Earthmover colleagues to replace the Vercel env var, then redeploy (env changes need a redeploy). Token replaced in Vercel (Production + Preview, Secret) on 2026-11-10; still needs a production deploy from the CLI (`vercel deploy --prod`), then check `/api/state`.
 
 ## To decide
 
