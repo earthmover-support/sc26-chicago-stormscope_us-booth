@@ -154,3 +154,9 @@ or a step not written yet) are 0, the Zarr `fill_value`; there is no CF `_FillVa
   +40 °C (near black) to −30 °C (light gray), then color for cold cloud tops: light blue
   −30, blue −40, green −50, yellow −60, red −70, dark red −80, white −90 °C (`CLEAN_IR_TABLE`
   in the script).
+- `water_vapor`: CIRA Simple Water Vapor RGB, day and night. Inverted brightness
+  temperatures, linear, gamma 1: R = C13 278.96→202.29 K (cloud height), G = C08 (6.19 µm)
+  242.67→214.66 K (upper-level moisture), B = C10 (7.34 µm) 261.03→245.12 K (low-to-mid
+  moisture). NOAA's Air Mass RGB would need C12 (9.6 µm), which StormScope-US does not predict.
+
+![Composites on an observed GOES-19 scan](docs/composites_sample.jpg)
