@@ -200,7 +200,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .steps li.split i::before { content: ""; position: absolute; inset: -2px; padding: 2px; border-radius: 0; background: linear-gradient(90deg, var(--nv-green) 50%, var(--em-lav) 50%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
 .steps b { display: block; font-size: 15px; color: #fff; } .steps span { font-size: 13px; color: #BDBDBD; }
 
-/* data flow: left bar colour = who runs that hop */
+/* data flow: left bar color = who runs that hop */
 .hops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .hops li { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--nv-card); border-left: 4px solid var(--nv-green); border-radius: 0; position: relative; }
 .hops li.noaa { border-left-color: #8A8F98; }

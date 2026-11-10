@@ -6,7 +6,7 @@ GOES-19 ABI CONUS observations (NOAA, AWS) -> Earth2Studio inference
 
 It finds the freshest complete
 input window by listing NOAA's `noaa-goes19` bucket (`latest_goes_slot`), stores two
-composites, `true_color` (day) and `clean_ir` (colour-enhanced Clean IR 10.3 um, for
+composites, `true_color` (day) and `clean_ir` (color-enhanced Clean IR 10.3 um, for
 night), and writes one Icechunk commit per init. Each 10-minute rollout step is handed
 to the backend's background writers as it is produced, so uploads overlap inference,
 and the commit at the end of the rollout publishes the whole init at once. It writes to
@@ -61,7 +61,7 @@ import pyproj
 
 # CF grid mapping of the HRRR grid StormScope runs on: Lambert conformal, single
 # standard parallel 38.5N, central meridian 97.5W, sphere of radius 6371229 m. `x`/`y`
-# are metres from the projection origin (east / north positive), as in
+# are meters from the projection origin (east / north positive), as in
 # `earth2studio.data.HRRR.HRRR_X/Y`.
 GRID_MAPPING = "hrrr_lambert_conformal"
 HRRR_LCC = {
@@ -83,7 +83,7 @@ HRRR_LCC["crs_wkt"] = HRRR_CRS.to_wkt()  # for GDAL/rioxarray
 RGB_VALUES = np.array(["red", "green", "blue"])
 # The tiles service takes the `rgb` dim as R, G, B by position and reads only
 # `valid_min`/`valid_max` (the byte stretch).
-RGB_BAND_ATTRS = {"long_name": "colour band", "color_interpretation": " ".join(RGB_VALUES)}
+RGB_BAND_ATTRS = {"long_name": "color band", "color_interpretation": " ".join(RGB_VALUES)}
 # Both composites are stored as bytes: 1..255 for data, 0 for missing (outside the
 # GOES view / requested region, or a step not written yet), as the Zarr v3 `fill_value`.
 # No CF `_FillValue` attribute: the tiles service decodes it by upcasting to float32.
@@ -96,8 +96,8 @@ TRUE_COLOR_CHANNELS = ["abi02c", "abi03c", "abi01c"]  # red 0.64, veggie 0.86, b
 CLEAN_IR_CHANNEL = "abi13c"  # Clean IR longwave window 10.35 um
 TRUE_COLOR_GAMMA = 2.2
 
-# Enhanced Clean IR colour table: grey for everything warmer than -30 C (warm = dark,
-# so the ground is near-black at night and low cloud grey), colour for cold cloud tops.
+# Enhanced Clean IR color table: gray for everything warmer than -30 C (warm = dark,
+# so the ground is near-black at night and low cloud gray), color for cold cloud tops.
 # (brightness temperature K, (R, G, B)), linear in between, clamped at both ends.
 CLEAN_IR_TABLE = [
     (183.15, (255, 255, 255)),  # -90 C  overshooting tops
@@ -106,8 +106,8 @@ CLEAN_IR_TABLE = [
     (213.15, (255, 230, 0)),  # -60 C
     (223.15, (0, 190, 70)),  # -50 C
     (233.15, (0, 80, 220)),  # -40 C
-    (243.15, (110, 190, 255)),  # -30 C  end of the colour scale
-    (243.16, (215, 215, 215)),  # start of the grey scale
+    (243.15, (110, 190, 255)),  # -30 C  end of the color scale
+    (243.16, (215, 215, 215)),  # start of the gray scale
     (313.15, (8, 8, 8)),  # +40 C  hot ground
 ]
 
@@ -119,9 +119,9 @@ def _to_bytes(rgb01: np.ndarray) -> np.ndarray:
 
 
 def true_color(arr: np.ndarray, variables: list[str]) -> np.ndarray:
-    """CIMSS natural true-colour RGB from ABI C01/C02/C03 reflectances.
+    """CIMSS natural true-color RGB from ABI C01/C02/C03 reflectances.
 
-    ABI has no green band; the CIMSS recipe synthesises one as
+    ABI has no green band; the CIMSS recipe synthesizes one as
     0.45 red + 0.10 veggie (0.86 um) + 0.45 blue. Each band is clipped to 0..1 and
     gamma-stretched (1/2.2). Takes a (..., variable, y, x) rollout step and returns
     (..., y, x, rgb) uint8 as stored; NaN (outside the GOES view or the region) -> 0.
@@ -134,15 +134,15 @@ def true_color(arr: np.ndarray, variables: list[str]) -> np.ndarray:
 
 
 def clean_ir(arr: np.ndarray, variables: list[str]) -> np.ndarray:
-    """Colour-enhanced Clean IR (C13, 10.35 um) composite, for night-time viewing.
+    """Color-enhanced Clean IR (C13, 10.35 um) composite, for night-time viewing.
 
     Brightness temperature (K) through `CLEAN_IR_TABLE`. Same (..., variable, y, x) ->
     (..., y, x, rgb) uint8 contract as `true_color`.
     """
     bt = arr[..., list(variables).index(CLEAN_IR_CHANNEL), :, :]
     temps = np.array([t for t, _ in CLEAN_IR_TABLE])
-    colours = np.array([c for _, c in CLEAN_IR_TABLE], dtype="float64") / 255
-    rgb = np.stack([np.interp(bt, temps, colours[:, i]) for i in range(3)], axis=-1)
+    colors = np.array([c for _, c in CLEAN_IR_TABLE], dtype="float64") / 255
+    rgb = np.stack([np.interp(bt, temps, colors[:, i]) for i in range(3)], axis=-1)
     rgb[np.isnan(bt)] = np.nan
     return _to_bytes(rgb)
 
@@ -150,13 +150,13 @@ def clean_ir(arr: np.ndarray, variables: list[str]) -> np.ndarray:
 COMPOSITES = {"true_color": true_color, "clean_ir": clean_ir}
 COMPOSITE_ATTRS = {
     "true_color": {
-        "long_name": "CIMSS natural true-colour RGB composite (ABI C02 / synthetic green / "
+        "long_name": "CIMSS natural true-color RGB composite (ABI C02 / synthetic green / "
         "C01 reflectance, gamma 2.2), 0-255",
         "source_channels": " ".join(TRUE_COLOR_CHANNELS),
     },
     "clean_ir": {
-        "long_name": "colour-enhanced Clean IR (ABI C13 10.35 um brightness temperature; "
-        "grey above -30 C, colour scale for colder cloud tops), 0-255",
+        "long_name": "color-enhanced Clean IR (ABI C13 10.35 um brightness temperature; "
+        "gray above -30 C, color scale for colder cloud tops), 0-255",
         "source_channels": CLEAN_IR_CHANNEL,
     },
 }
@@ -310,7 +310,7 @@ REGION_PADDING = 25  # real context pixels per side for --region (set_domain)
 
 
 def geozarr_attrs(y, x) -> dict:
-    """GeoZarr `proj` + `spatial` attributes for a group over this `(y, x)` grid (metres).
+    """GeoZarr `proj` + `spatial` attributes for a group over this `(y, x)` grid (meters).
 
     Origin is the corner of pixel (0, 0); `y` runs south to north, so the transform is
     south-up (`e > 0`).
@@ -699,7 +699,7 @@ def create_schema(backend, model, coords, lead_time: np.ndarray, region) -> None
     backend.root["time"].attrs.update(
         {
             "standard_name": "forecast_reference_time",
-            "long_name": "analysis (nowcast initialisation) time",
+            "long_name": "analysis (nowcast initialization) time",
         }
     )
     backend.root["lead_time"].attrs.update(

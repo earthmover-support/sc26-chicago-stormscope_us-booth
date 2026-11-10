@@ -137,18 +137,18 @@ uv run python scripts/stormscope_us_pipeline.py --publish-target arraylake
 
 It stores two RGB composites, not the 8 raw channels. Both are
 `(ensemble, time, lead_time, y, x, rgb)` uint8 in 0–255 on the HRRR Lambert conformal grid
-(1024 × 1792 at 3 km for CONUS; `x`/`y` in metres, CF grid mapping
+(1024 × 1792 at 3 km for CONUS; `x`/`y` in meters, CF grid mapping
 `hrrr_lambert_conformal`, 2-D `lat`/`lon`). Each composite is computed in 0–1, then stored
 as `round(x * 255)` clipped to 1–255. Missing pixels (outside the GOES view or the region,
 or a step not written yet) are 0, the Zarr `fill_value`; there is no CF `_FillValue`.
 
-- `true_color`: CIMSS natural true colour from ABI reflectances. ABI has no green band, so
-  green is synthesised:
+- `true_color`: CIMSS natural true color from ABI reflectances. ABI has no green band, so
+  green is synthesized:
   ```
   R = C02 (0.64 µm)    G = 0.45·C02 + 0.10·C03 (0.86 µm) + 0.45·C01    B = C01 (0.47 µm)
   ```
   each clipped to 0–1 and gamma-stretched (1/2.2).
-- `clean_ir`: C13 (10.35 µm) brightness temperature through a fixed colour table: grey from
-  +40 °C (near black) to −30 °C (light grey), then colour for cold cloud tops: light blue
+- `clean_ir`: C13 (10.35 µm) brightness temperature through a fixed color table: gray from
+  +40 °C (near black) to −30 °C (light gray), then color for cold cloud tops: light blue
   −30, blue −40, green −50, yellow −60, red −70, dark red −80, white −90 °C (`CLEAN_IR_TABLE`
   in the script).

@@ -70,7 +70,7 @@ def test_clean_ir_table_points(bt, rgb):
     np.testing.assert_array_equal(out, np.clip(rgb, 1, 255))
 
 
-def test_clean_ir_warm_is_grey_and_darker_when_warmer():
+def test_clean_ir_warm_is_gray_and_darker_when_warmer():
     warm = pl.clean_ir(step({"abi13c": 300.0}), VARS)[0, 0, 0, 0, 0]
     cool = pl.clean_ir(step({"abi13c": 260.0}), VARS)[0, 0, 0, 0, 0]
     assert warm[0] == warm[1] == warm[2]
@@ -78,9 +78,9 @@ def test_clean_ir_warm_is_grey_and_darker_when_warmer():
     assert warm[0] < cool[0]
 
 
-def test_clean_ir_cold_tops_are_coloured():
+def test_clean_ir_cold_tops_are_colored():
     out = pl.clean_ir(step({"abi13c": 213.15}), VARS)[0, 0, 0, 0, 0]
-    assert len(set(out.tolist())) > 1  # not grey
+    assert len(set(out.tolist())) > 1  # not gray
 
 
 def test_clean_ir_clamps_and_masks():

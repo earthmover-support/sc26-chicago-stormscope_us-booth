@@ -428,7 +428,7 @@
   const VAR_LABELS = { true_color: "True Color", clean_ir: "Clean IR" };
   const VAR_DEFINITIONS = {
     true_color: "True Color: an RGB composite showing clouds and Earth’s surface in daylight. A rendered satellite view, not a direct cloud-cover measurement.",
-    clean_ir: "Clean IR: the 10.3 µm infrared window, colour-enhanced. Grey shows warm ground and low clouds; colours mark cold, high cloud tops of growing storms. Works day and night.",
+    clean_ir: "Clean IR: the 10.3 µm infrared window, color-enhanced. Gray shows warm ground and low clouds; colors mark cold, high cloud tops of growing storms. Works day and night.",
   };
   function setVariableHelp(button, name) {
     const definition = VAR_DEFINITIONS[name] || name.replaceAll("_", " ");
@@ -510,7 +510,7 @@
     if (!sel) {
       sel = el("select");
       sel.id = "initSelect";
-      sel.setAttribute("aria-label", "Forecast initialisation");
+      sel.setAttribute("aria-label", "Forecast initialization");
       sel.addEventListener("change", () => selectInit(Number(sel.value)));
       box.replaceChildren(sel);
     }

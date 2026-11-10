@@ -2,7 +2,7 @@
 
 A static MapLibre globe of the latest StormScope-US nowcasts over the contiguous US. Tiles
 come from the public Arraylake tiles service of the `nvidia` org, branch `main`; on
-Vercel through a caching proxy. The page has an init selector, a true colour / Clean IR
+Vercel through a caching proxy. The page has an init selector, a true color / Clean IR
 toggle, and playback over lead times. It starts on Clean IR while it is dark at the SC26
 venue. Playback holds the first frame until all leads have loaded. Every minute it checks
 for a new init, loads it in the background, and switches to it once it is complete. No

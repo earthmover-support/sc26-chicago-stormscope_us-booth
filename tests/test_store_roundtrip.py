@@ -91,7 +91,7 @@ def test_two_inits_roundtrip(tmp_path):
     assert (tc[..., 0, 0, :] == 0).all()  # NaN pixel -> fill
     assert (tc[..., 1:, 1:, :] > 0).all()  # every written step filled
     ir = ds.clean_ir.values[0, 1, 2, 3, 3]
-    assert len(set(ir.tolist())) > 1  # coloured cold top
+    assert len(set(ir.tolist())) > 1  # colored cold top
     assert ds.valid_time.values[1, 2] == np.datetime64("2026-11-16T18:30", "ns")
 
 

@@ -77,7 +77,7 @@
   <div>
     <div class="label">Variable</div>
     <div class="row" id="vars">
-      <button class="pill active" data-var="true_color">True colour</button>
+      <button class="pill active" data-var="true_color">True color</button>
       <button class="pill" data-var="clean_ir">Clean IR</button>
     </div>
   </div>
@@ -100,7 +100,7 @@ const TILES = "https://tiles-dd7cd36ec0562874.compute.arraylake.app/v1/services/
 const BASE = location.protocol === "https:" ? "/tiles" : TILES;
 const REPO = "sc26-chicago-stormscope_us-booth";
 const REF = "main";
-// The RGB composites are stored as uint8 bytes, hence one colour scale.
+// The RGB composites are stored as uint8 bytes, hence one color scale.
 const COLORSCALERANGE = "0,255";
 const BOUNDS = [-133.712, 21.582, -61.337, 52.145]; // lat/lon extent of the model grid
 const FRAME_MS = 800;
@@ -155,7 +155,7 @@ function sunUp(lat, lon, t = new Date()) {
   const H = (280.46061837 + 360.98564736629 * d + lon) * r - ra; // local hour angle
   return Math.sin(lat * r) * Math.sin(dec) + Math.cos(lat * r) * Math.cos(dec) * Math.cos(H) > 0;
 }
-// True colour is black at night, so a page opened while the venue is dark starts on Clean IR
+// True color is black at night, so a page opened while the venue is dark starts on Clean IR
 let leads = [], variable = sunUp(...VENUE) ? "true_color" : "clean_ir", frame = 0, timer = null, firstLabel, runs = 0;
 // A run is one init and variable: { id, time, variable, added, addedAt, loaded }, where
 // `loaded` holds the indices of frames whose tiles have all arrived.
