@@ -104,6 +104,26 @@ def test_clean_ir_table_monotonic():
     assert temps == sorted(temps)
 
 
+# ---- water_vapor ------------------------------------------------------------
+
+
+def test_water_vapor_ends_and_mid():
+    (r_ch, r_warm, r_cold), (g_ch, g_warm, g_cold), (b_ch, b_warm, b_cold) = pl.WATER_VAPOR_BANDS
+    warm = pl.water_vapor(step({r_ch: r_warm + 10, g_ch: g_warm, b_ch: b_warm}), VARS)
+    cold = pl.water_vapor(step({r_ch: r_cold - 10, g_ch: g_cold, b_ch: b_cold}), VARS)
+    mid = pl.water_vapor(step({r_ch: (r_warm + r_cold) / 2, g_ch: g_warm, b_ch: b_cold}), VARS)
+    assert (warm == 1).all()  # warm/dry -> black, clamped to 1 (not the fill)
+    assert (cold == 255).all()  # cold/moist -> white
+    np.testing.assert_allclose(mid[0, 0, 0, 0, 0], [128, 1, 255], atol=1)
+
+
+def test_water_vapor_nan_is_fill():
+    arr = step({"abi08c": 230.0, "abi10c": 250.0, "abi13c": 250.0})
+    arr[..., VARS.index("abi08c"), 0, 0] = np.nan
+    out = pl.water_vapor(arr, VARS)[0, 0, 0]
+    assert out[0, 0, 1] == pl.RGB_FILL and (out[1, 1] > 0).all()
+
+
 # ---- GOES slots -------------------------------------------------------------
 
 

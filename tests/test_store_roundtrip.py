@@ -95,6 +95,26 @@ def test_two_inits_roundtrip(tmp_path):
     assert ds.valid_time.values[1, 2] == np.datetime64("2026-11-16T18:30", "ns")
 
 
+def test_new_composite_added_to_existing_repo(tmp_path, monkeypatch):
+    model = StubModel()
+    old = {k: v for k, v in pl.COMPOSITES.items() if k != "water_vapor"}
+    monkeypatch.setattr(pl, "COMPOSITES", old)
+    monkeypatch.setattr(pl, "TIME_ARRAYS", ("time", "valid_time", *old))
+    run_init(model, tmp_path, np.datetime64("2026-11-16T18:00"))
+    monkeypatch.undo()
+    run_init(model, tmp_path, np.datetime64("2026-11-16T18:10"))
+
+    repo = icechunk.Repository.open(
+        icechunk.local_filesystem_storage(str(tmp_path / "stormscope_us.icechunk"))
+    )
+    ds = xr.open_zarr(repo.readonly_session("main").store, consolidated=False)
+    wv = ds.water_vapor
+    assert wv.shape == ds.true_color.shape and wv.dtype == np.uint8
+    assert wv.attrs["grid_mapping"] == pl.GRID_MAPPING
+    assert (wv.values[:, 0] == pl.RGB_FILL).all()  # init written before it existed
+    assert (wv.values[:, 1, :, 1:, 1:] > 0).all()
+
+
 def test_rerun_overwrites_and_n_steps_mismatch(tmp_path):
     model = StubModel()
     run_init(model, tmp_path, np.datetime64("2026-11-16T18:00"))
