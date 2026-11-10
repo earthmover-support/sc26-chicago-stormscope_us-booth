@@ -50,17 +50,18 @@ al compute update nvidia <tiles-id> --min-replicas 8 --max-replicas 8
 
 Set `--min-replicas 0` after booth hours and `al compute disable` after the event.
 
-Render parameters for `true_color` and `clean_ir`:
+Render parameters for `true_color`, `clean_ir` and `water_vapor`:
 
 | Parameter | Value | Why |
 | --- | --- | --- |
 | `style` | `raster/rgb` | Real 3-band composite; pass `variables=true_color` with no `rgb` selector. |
-| `colorscalerange` | `0,255` | Both composites are stored as uint8 0–255 (see [Pipeline script](#pipeline-script)). |
+| `colorscalerange` | `0,255` | All three composites are stored as uint8 0–255 (see [Pipeline script](#pipeline-script)). |
 | `lead_time` | `PT10M` | 13 frames: 0, 10, …, 120 minutes. 0 is the observed satellite frame, the rest forecast. |
 | `ensemble` | `0` | Single member; required because every variable is 5-D. |
 
 `true_color` is black on the night side; use `clean_ir` there (the booth page and the
-viewer pick it automatically while it is dark at the venue).
+viewer pick it automatically while it is dark at the venue). `water_vapor` works day and
+night too; it shows moist and dry air rather than cloud-top temperature.
 
 ## Running it
 
