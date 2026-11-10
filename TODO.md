@@ -3,10 +3,14 @@
 Things only you can fix or decide. Claude keeps this list current; tick items off or
 delete them when done.
 
+## To fix
+
+- [ ] Hosted presentation token rejected (2026-11-10): `/api/state` on the Vercel project `sc26-chicago-stormscope-us-booth` gets `403 Access Denied` from `api.earthmover.io/repos/nvidia/sc26-chicago-stormscope_us-booth/open`. The repo itself is healthy and readable with other credentials, so the `ARRAYLAKE_API_TOKEN` set in Vercel has no read access to this repo (wrong principal, not in the `nvidia` org, or revoked). Mint a read-only token that can open the repo, ask the Earthmover colleagues to replace the Vercel env var, then redeploy (env changes need a redeploy).
+
 ## To decide
 
-- [ ] Clean IR colour table (`CLEAN_IR_TABLE` in `scripts/stormscope_us_pipeline.py`): grey from +40 °C to −30 °C, then light blue −30 / blue −40 / green −50 / yellow −60 / red −70 / dark red −80 / white −90 °C. OK, or name a specific one, e.g. NOAA/CIMSS "Rainbow IR" or the AVN enhancement? Judge it on a real run; to discuss with colleagues.
-- [ ] True colour recipe: is CIMSS natural true colour (synthetic green 0.45·C02 + 0.10·C03 + 0.45·C01, gamma 2.2) OK? Judge it on a real run; to discuss with colleagues.
+- [ ] Clean IR color table (`CLEAN_IR_TABLE` in `scripts/stormscope_us_pipeline.py`): gray from +40 °C to −30 °C, then light blue −30 / blue −40 / green −50 / yellow −60 / red −70 / dark red −80 / white −90 °C. OK, or name a specific one, e.g. NOAA/CIMSS "Rainbow IR" or the AVN enhancement? Judge it on a real run; to discuss with colleagues.
+- [ ] True color recipe: is CIMSS natural true color (synthetic green 0.45·C02 + 0.10·C03 + 0.45·C01, gamma 2.2) OK? Judge it on a real run; to discuss with colleagues.
 - [ ] Cheaper GPU: the pipeline uses only ~11 GB of GPU memory. All L40S sizes measured run at the same speed (~45 s per forecast); `g6e.xlarge` ($1.86/h) is now the default. Not yet benchmarked: `g6e.2xlarge` ($2.24/h, not expected to change anything), `g6.xlarge` (L4, $0.80/h) and `g5.xlarge` (A10G, $1.01/h). L4/A10G would add ~1.5–2 min latency and break the "5 minutes" slide claim. TODO rows in [docs/GPU.md, Inference timing log](docs/GPU.md#inference-timing-log).
 
 ## Done
