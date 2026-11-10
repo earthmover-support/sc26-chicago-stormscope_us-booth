@@ -94,7 +94,10 @@ RGB_ENCODING = {"valid_min": 0, "valid_max": 255}
 # ABI L2 CMI: C01-C06 are reflectance factors (0..1), C07-C16 brightness temperatures (K).
 TRUE_COLOR_CHANNELS = ["abi02c", "abi03c", "abi01c"]  # red 0.64, veggie 0.86, blue 0.47 um
 CLEAN_IR_CHANNEL = "abi13c"  # Clean IR longwave window 10.35 um
-TRUE_COLOR_GAMMA = 2.2
+# EUMETSAT true-color contrast curve, as in the Berlin (FCI) pipeline: reflectance *255
+# (x) -> byte (y), linear in between. It lifts dark surfaces and compresses bright cloud,
+# so land reads clearer and less hazy than a plain gamma 2.2 (compared on a real frame).
+TRUE_COLOR_STRETCH = ([0, 30, 60, 120, 190, 255], [0, 110, 160, 210, 240, 255])
 
 # Enhanced Clean IR color table: gray for everything warmer than -30 C (warm = dark,
 # so the ground is near-black at night and low cloud gray), color for cold cloud tops.
@@ -123,13 +126,13 @@ def true_color(arr: np.ndarray, variables: list[str]) -> np.ndarray:
 
     ABI has no green band; the CIMSS recipe synthesizes one as
     0.45 red + 0.10 veggie (0.86 um) + 0.45 blue. Each band is clipped to 0..1 and
-    gamma-stretched (1/2.2). Takes a (..., variable, y, x) rollout step and returns
-    (..., y, x, rgb) uint8 as stored; NaN (outside the GOES view or the region) -> 0.
+    put through the EUMETSAT contrast curve `TRUE_COLOR_STRETCH`. Takes a
+    (..., variable, y, x) rollout step and returns (..., y, x, rgb) uint8 as stored; NaN (outside the GOES view or the region) -> 0.
     """
     red, veggie, blue = (arr[..., list(variables).index(ch), :, :] for ch in TRUE_COLOR_CHANNELS)
     green = 0.45 * red + 0.10 * veggie + 0.45 * blue
     rgb = np.stack([red, green, blue], axis=-1)
-    rgb = np.clip(rgb, 0, 1) ** (1 / TRUE_COLOR_GAMMA)
+    rgb = np.interp(np.clip(rgb, 0, 1) * 255, *TRUE_COLOR_STRETCH) / 255
     return _to_bytes(rgb)
 
 
@@ -151,7 +154,7 @@ COMPOSITES = {"true_color": true_color, "clean_ir": clean_ir}
 COMPOSITE_ATTRS = {
     "true_color": {
         "long_name": "CIMSS natural true-color RGB composite (ABI C02 / synthetic green / "
-        "C01 reflectance, gamma 2.2), 0-255",
+        "C01 reflectance, EUMETSAT contrast stretch), 0-255",
         "source_channels": " ".join(TRUE_COLOR_CHANNELS),
     },
     "clean_ir": {
@@ -737,6 +740,7 @@ def extend_schema(backend, time_: np.ndarray, lead_time: np.ndarray, y: np.ndarr
     for name in COMPOSITES:
         if name not in backend.root or backend.root[name].dtype != RGB_DTYPE:
             raise ValueError(f"repo has no {RGB_DTYPE} {name}; publish to an empty repo or branch")
+        backend.root[name].attrs.update(COMPOSITE_ATTRS[name])  # recipe changes reach old repos
     stored_lead = backend.root["lead_time"][:]
     if not np.array_equal(stored_lead, lead_time):
         raise ValueError(

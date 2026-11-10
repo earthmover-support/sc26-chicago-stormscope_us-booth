@@ -147,7 +147,9 @@ or a step not written yet) are 0, the Zarr `fill_value`; there is no CF `_FillVa
   ```
   R = C02 (0.64 µm)    G = 0.45·C02 + 0.10·C03 (0.86 µm) + 0.45·C01    B = C01 (0.47 µm)
   ```
-  each clipped to 0–1 and gamma-stretched (1/2.2).
+  each clipped to 0–1 and put through EUMETSAT's true-color contrast curve, as in the Berlin
+  demo (reflectance·255 `[0, 30, 60, 120, 190, 255]` → `[0, 110, 160, 210, 240, 255]`,
+  linear in between). No Rayleigh or solar-zenith correction.
 - `clean_ir`: C13 (10.35 µm) brightness temperature through a fixed color table: gray from
   +40 °C (near black) to −30 °C (light gray), then color for cold cloud tops: light blue
   −30, blue −40, green −50, yellow −60, red −70, dark red −80, white −90 °C (`CLEAN_IR_TABLE`

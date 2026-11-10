@@ -37,12 +37,18 @@ def test_true_color_shape_dtype():
     assert out.dtype == np.uint8
 
 
-def test_true_color_synthetic_green_and_gamma():
+def test_true_color_synthetic_green_and_stretch():
     r, n, b = 0.3, 0.6, 0.1
     out = pl.true_color(step({"abi01c": b, "abi02c": r, "abi03c": n}), VARS)[0, 0, 0, 0, 0]
     g = 0.45 * r + 0.10 * n + 0.45 * b
-    expected = np.round(np.array([r, g, b]) ** (1 / 2.2) * 255)
+    expected = np.round(np.interp(np.array([r, g, b]) * 255, *pl.TRUE_COLOR_STRETCH))
     np.testing.assert_array_equal(out, expected)
+
+
+def test_true_color_stretch_knots():
+    # reflectance 60/255 -> byte 160, as in the EUMETSAT curve
+    out = pl.true_color(step({"abi01c": 60 / 255, "abi02c": 60 / 255, "abi03c": 60 / 255}), VARS)
+    assert (out == 160).all()
 
 
 def test_true_color_black_is_not_missing_and_nan_is_fill():
