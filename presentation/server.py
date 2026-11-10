@@ -232,7 +232,7 @@ def tile_url(run: dict, variable: str, lead: int, z: int, x: int, y: int) -> str
             "colorscalerange": v["colorscalerange"],
             "time": run["time"],
             "lead_time": f"{lead} minutes",
-            "ensemble": "0",
+            "ensemble": "1",
             "f": "png",
             "width": "512",
             "height": "512",

@@ -47,14 +47,14 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
 | P | pause / resume the forecast loop |
 | O | loop / play once (stops on +120) |
 | S | cycle playback speed (slow 1 s / medium 0.5 s / fast 0.25 s per frame) |
-| T / I / W | `true_color` / `clean_ir` / `water_vapor` |
+| T / W | `true_color` / `water_vapor` |
 | 1–9, L | pick an initialization (1 = L = latest) |
 | C | collapse / expand the ingest strip |
 
 Every toggle (loop, pause, speed, variable, init, rotation, strip) reverts to the defaults
 after `attract_reset_s` (config.json, 180 s) without any input, so a visitor's click never
 sticks for the day. The page starts (and resets) on `true_color` while the sun is up at
-`station` (McCormick Place) and on `clean_ir` while it is dark. `config.json` is read when
+`station` (McCormick Place) and on `water_vapor` while it is dark. `config.json` is read when
 `server.py` starts: restart it after editing.
 
 ## Before the event
@@ -73,7 +73,7 @@ sticks for the day. The page starts (and resets) on `true_color` while the sun i
    Quick check that the tile server is up:
    ```bash
    B=<tile_base from config.json>
-   curl -o t.png -w '%{http_code}\n' "$B/main/tiles/WebMercatorQuad/3/2/3?variables=true_color&style=raster/rgb&colorscalerange=0,255&time=<INIT>&lead_time=10%20minutes&ensemble=0&f=png"
+   curl -o t.png -w '%{http_code}\n' "$B/main/tiles/WebMercatorQuad/3/2/3?variables=true_color&style=raster/rgb&colorscalerange=0,255&time=<INIT>&lead_time=10%20minutes&ensemble=1&f=png"
    ```
 3. **SQL**: `al compute enable nvidia sql --sku-code xs`; its hostname
    (`sql-4ae7e8fe159e81b6.compute.arraylake.app`) is in `config.json` (`sql.host`; empty
@@ -88,7 +88,7 @@ sticks for the day. The page starts (and resets) on `true_color` while the sun i
    result until the next init. `{init}` is replaced by the newest complete init;
    `{lat}`/`{lon}`/`{box}` in `sql.query` are filled per venue. `lat`/`lon` are 2-D pixel
    coordinates, so filter on a `BETWEEN` box, never on equality.
-4. **Variables**: `true_color`, `clean_ir` and `water_vapor` are all uint8 0-255 RGB composites
+4. **Variables**: `true_color` and `water_vapor` are both uint8 0-255 RGB composites
    (`raster/rgb`, `colorscalerange` `0,255`). Add more under `variables` in `config.json`.
 5. **Run length**: the strip and scrubber show the observed +0 frame plus 12 steps,
    +10 to +120 min (`lead_steps`, `lead_step_min`). Keep the commit-message format in the
@@ -160,7 +160,7 @@ mkdir "$B/.vercel" && echo '{"projectId":"local","orgId":"local","settings":{"fr
 ## Panels
 
 1. AI weather nowcasting: six observed GOES-19 frames -> twelve AI frames, +120 min.
-2. Earth observations: GOES-19 ABI, the three composites with live +0 previews (click to
+2. Earth observations: GOES-19 ABI, the two composites with live +0 previews (click to
    switch the globe layer).
 3. The AI model: StormScope-US Flash, a distilled diffusion model on the 3 km HRRR grid.
 4. The pipeline: Earth2Studio fetch -> predict -> write -> serve.

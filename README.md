@@ -50,18 +50,18 @@ al compute update nvidia <tiles-id> --min-replicas 8 --max-replicas 8
 
 Set `--min-replicas 0` after booth hours and `al compute disable` after the event.
 
-Render parameters for `true_color`, `clean_ir` and `water_vapor`:
+Render parameters for `true_color` and `water_vapor`:
 
 | Parameter | Value | Why |
 | --- | --- | --- |
 | `style` | `raster/rgb` | Real 3-band composite; pass `variables=true_color` with no `rgb` selector. |
-| `colorscalerange` | `0,255` | All three composites are stored as uint8 0–255 (see [Pipeline script](#pipeline-script)). |
+| `colorscalerange` | `0,255` | Both composites are stored as uint8 0–255 (see [Pipeline script](#pipeline-script)). |
 | `lead_time` | `PT10M` | 13 frames: 0, 10, …, 120 minutes. 0 is the observed satellite frame, the rest forecast. |
-| `ensemble` | `0` | Single member; required because every variable is 5-D. |
+| `ensemble` | `1` | Single member (int8, numbered from 1); required because every variable is 5-D. |
 
-`true_color` is black on the night side; use `clean_ir` there (the booth page and the
-viewer pick it automatically while it is dark at the venue). `water_vapor` works day and
-night too; it shows moist and dry air rather than cloud-top temperature.
+`true_color` is black on the night side; use `water_vapor` there (the booth page and the
+viewer pick it automatically while it is dark at the venue). It works day and night and
+shows cloud height and moist and dry air.
 
 ## Running it
 
@@ -139,7 +139,7 @@ uv run python scripts/stormscope_us_pipeline.py --publish-target arraylake
 It stores two RGB composites, not the 8 raw channels. Both are
 `(ensemble, time, lead_time, y, x, rgb)` uint8 in 0–255 on the HRRR Lambert conformal grid
 (1024 × 1792 at 3 km for CONUS; `x`/`y` in meters, CF grid mapping
-`hrrr_lambert_conformal`, 2-D `lat`/`lon`). Each composite is computed in 0–1, then stored
+`hrrr_lambert_conformal`, 2-D `lat`/`lon`, each one chunk; `ensemble` is int8, numbered from 1). Each composite is computed in 0–1, then stored
 as `round(x * 255)` clipped to 1–255. Missing pixels (outside the GOES view or the region,
 or a step not written yet) are 0, the Zarr `fill_value`; there is no CF `_FillValue`.
 
@@ -151,10 +151,6 @@ or a step not written yet) are 0, the Zarr `fill_value`; there is no CF `_FillVa
   each clipped to 0–1 and put through EUMETSAT's true-color contrast curve, as in the Berlin
   demo (reflectance·255 `[0, 30, 60, 120, 190, 255]` → `[0, 110, 160, 210, 240, 255]`,
   linear in between). No Rayleigh or solar-zenith correction.
-- `clean_ir`: C13 (10.35 µm) brightness temperature through a fixed color table: gray from
-  +40 °C (near black) to −30 °C (light gray), then color for cold cloud tops: light blue
-  −30, blue −40, green −50, yellow −60, red −70, dark red −80, white −90 °C (`CLEAN_IR_TABLE`
-  in the script).
 - `water_vapor`: CIRA Simple Water Vapor RGB, day and night. Inverted brightness
   temperatures, linear, gamma 1: R = C13 278.96→202.29 K (cloud height), G = C08 (6.19 µm)
   242.67→214.66 K (upper-level moisture), B = C10 (7.34 µm) 261.03→245.12 K (low-to-mid

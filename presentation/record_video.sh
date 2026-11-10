@@ -13,7 +13,7 @@
 #   WINDOW_X  left edge of that monitor in points (Chrome opens fullscreen there)
 #   LOOP_S    seconds per forecast playback loop (+0 -> +120min); empty = auto from
 #             config.json (leads * speed + hold_ms). Override if you change playback speed live.
-#   FIRST_VAR variable shown first; alternates with clean_ir after every playback loop.
+#   FIRST_VAR variable shown first; alternates with water_vapor after every playback loop.
 #             Needs Accessibility permission for the terminal app the first time osascript
 #             sends keystrokes (System Settings > Privacy & Security > Accessibility).
 set -euo pipefail
@@ -32,13 +32,13 @@ RAW="$TMP/raw.mp4"
 if [[ -z "$LOOP_S" ]]; then
   LOOP_S="$(HERE="$HERE" python3 -c 'import json, os; c=json.load(open(os.path.join(os.environ["HERE"], "config.json"))); n=c["lead_steps"]+1; sp={"slow":0.75,"normal":0.5,"fast":0.25}[c.get("playback_speed","normal")]; print("%.1f" % (n*sp + c.get("hold_ms",2500)/1000))')"
 fi
-case "$FIRST_VAR" in true_color) SECOND_VAR="clean_ir" ;; clean_ir) SECOND_VAR="true_color" ;; *)
-  echo "FIRST_VAR must be true_color or clean_ir" >&2; exit 1 ;; esac
+case "$FIRST_VAR" in true_color) SECOND_VAR="water_vapor" ;; water_vapor) SECOND_VAR="true_color" ;; *)
+  echo "FIRST_VAR must be true_color or water_vapor" >&2; exit 1 ;; esac
 
-# app.js keys: t = true_color, i = clean_ir
+# app.js keys: t = true_color, w = water_vapor
 send_var() {
   local var="$1" key
-  case "$var" in true_color) key="t" ;; clean_ir) key="i" ;; esac
+  case "$var" in true_color) key="t" ;; water_vapor) key="w" ;; esac
   osascript -e 'tell application "Google Chrome" to activate' \
     -e "tell application \"System Events\" to keystroke \"$key\"" >/dev/null || {
     echo "osascript keystroke failed: allow Accessibility for this terminal app in System Settings > Privacy & Security" >&2

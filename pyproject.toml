@@ -31,7 +31,6 @@ dependencies = [
 [dependency-groups]
 dev = [
     "coiled>=1.135.6",
-    "pytest>=8",
 ]
 
 [project.optional-dependencies]
@@ -71,5 +70,3 @@ extend-exclude = ["presentation/node_modules"]
 select = ["E", "F", "W", "I", "UP", "B"]
 ignore = ["E501"]  # long strings/comments are common in the CF metadata
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]

@@ -9,7 +9,6 @@
 
   "variables": {
     "true_color": { "style": "raster/rgb", "colorscalerange": "0,255" },
-    "clean_ir":   { "style": "raster/rgb", "colorscalerange": "0,255" },
     "water_vapor": { "style": "raster/rgb", "colorscalerange": "0,255" }
   },
 

@@ -78,7 +78,6 @@
     <div class="label">Variable</div>
     <div class="row" id="vars">
       <button class="pill active" data-var="true_color">True color</button>
-      <button class="pill" data-var="clean_ir">Clean IR</button>
       <button class="pill" data-var="water_vapor">Water vapor</button>
     </div>
   </div>
@@ -156,8 +155,8 @@ function sunUp(lat, lon, t = new Date()) {
   const H = (280.46061837 + 360.98564736629 * d + lon) * r - ra; // local hour angle
   return Math.sin(lat * r) * Math.sin(dec) + Math.cos(lat * r) * Math.cos(dec) * Math.cos(H) > 0;
 }
-// True color is black at night, so a page opened while the venue is dark starts on Clean IR
-let leads = [], variable = sunUp(...VENUE) ? "true_color" : "clean_ir", frame = 0, timer = null, firstLabel, runs = 0;
+// True color is black at night, so a page opened while the venue is dark starts on Water vapor
+let leads = [], variable = sunUp(...VENUE) ? "true_color" : "water_vapor", frame = 0, timer = null, firstLabel, runs = 0;
 // A run is one init and variable: { id, time, variable, added, addedAt, loaded }, where
 // `loaded` holds the indices of frames whose tiles have all arrived.
 let run = null; // on screen
@@ -208,7 +207,7 @@ const coords = loadCoords(); // runs while the basemap style loads
 function tileUrl(r, lead) {
   const p = new URLSearchParams({
     variables: r.variable, style: "raster/rgb", colorscalerange: COLORSCALERANGE,
-    time: r.time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
+    time: r.time, lead_time: `${lead} minutes`, ensemble: "1", width: "512", height: "512", f: "png",
   });
   return `${BASE}/${REPO}/${REF}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
 }

@@ -8,7 +8,7 @@ Arraylake repo: https://app.earthmover.io/nvidia/sc26-chicago-stormscope_us-boot
 Key differences:
 - spatial domain: CONUS with GOES
 - https://nvidia.github.io/earth2studio/main/examples/04_nowcasting/03_stormscope_goes_example/ with '3km_10min_flash' but no MRMS radar
-- output: true_color and color-enhanced Clean IR for nights
+- output: true_color (day) and CIRA water_vapor RGB (day and night)
 
 ## Goals
 
@@ -24,7 +24,6 @@ is kept besides its structure.
 ```
 .
 ├── scripts/        # GPU pipeline: GOES-19 fetch -> StormScope-US inference -> Icechunk/Arraylake ingest
-├── tests/          # pytest: composites, GOES slot logic, local store roundtrip (no GPU)
 ├── presentation/   # booth screen: web app (MapLibre globe, explainer panels, live SQL), its local server, and Vercel functions for the hosted copy
 ├── site/           # static MapLibre globe hosted on Vercel: init/variable selector, lead-time playback
 ├── docs/           # end-to-end latency, stage by stage, with every improvement measured
@@ -40,6 +39,6 @@ is kept besides its structure.
 
 ## Conventions
 
-- `uv run pytest` must pass (no GPU needed); `uvx pre-commit run --all-files` for ruff.
+- `uvx pre-commit run --all-files` for ruff.
 - Keep `TODO.md` current whenever a placeholder, assumption or blocker needs the user.
 - Placeholders (`TODO-<name>`) mark infra that does not exist yet; none are left.
