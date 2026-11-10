@@ -188,3 +188,72 @@ def test_geozarr_attrs_transform():
     attrs = pl.geozarr_attrs(y, x)
     assert attrs["spatial:transform"] == [3000.0, 0.0, -1500.0, 0.0, 3000.0, -6000.0]
     assert attrs["spatial:shape"] == [4, 5]
+
+
+# ---- FrameCache -------------------------------------------------------------
+
+
+class FakeSource:
+    """Returns one (time=1, variable, y=2, x=2) float64 frame per call; counts calls."""
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, time, variable):
+        import xarray as xr
+
+        self.calls.append(time[0])
+        value = (time[0] - np.datetime64("2026-01-01")) / np.timedelta64(1, "m")
+        data = np.full((1, len(variable), 2, 2), value, dtype="float64")
+        return xr.DataArray(
+            data,
+            dims=("time", "variable", "y", "x"),
+            coords={"time": time, "variable": list(variable)},
+        )
+
+
+def _window(init: str, n=6, step_min=10):
+    t = np.datetime64(init, "ns")
+    return [t - i * np.timedelta64(step_min, "m") for i in reversed(range(n))]
+
+
+def _fetch_window(cache, init):
+    """Mimic `fetch_data`: one source call per lead time."""
+    return [cache(np.array([t]), ["abi13c", "abi02c"]) for t in _window(init)]
+
+
+def test_frame_cache_reuses_frames_of_init_10_min_earlier():
+    src = FakeSource()
+    cache = pl.FrameCache(src, keep=timedelta(minutes=70))
+    _fetch_window(cache, "2026-11-10T12:00")
+    assert len(src.calls) == 6
+    _fetch_window(cache, "2026-11-10T12:05")  # other parity: no overlap
+    assert len(src.calls) == 12
+    _fetch_window(cache, "2026-11-10T12:10")  # shares 5 frames with 12:00
+    assert len(src.calls) == 13
+    assert src.calls[-1] == np.datetime64("2026-11-10T12:10", "ns")
+    assert (cache.hits, cache.misses) == (5, 13)
+
+
+def test_frame_cache_returns_inner_values_as_float32():
+    src = FakeSource()
+    cache = pl.FrameCache(src, keep=timedelta(minutes=70))
+    t = np.array([np.datetime64("2026-11-10T12:00", "ns")])
+    first, again = cache(t, ["abi13c"]), cache(t, ["abi13c"])
+    assert first.dtype == np.float32
+    np.testing.assert_array_equal(first.values, src(t, ["abi13c"]).values)
+    assert again.identical(first)
+    both = cache(np.array(_window("2026-11-10T12:00", n=2)), ["abi13c"])
+    assert both.sizes["time"] == 2
+
+
+def test_frame_cache_evicts_old_frames_and_keys_on_variables():
+    src = FakeSource()
+    cache = pl.FrameCache(src, keep=timedelta(minutes=70))
+    _fetch_window(cache, "2026-11-10T12:00")
+    _fetch_window(cache, "2026-11-10T13:30")  # 11:10 .. 12:00 all older than 12:20
+    assert min(t for t, _ in cache.frames) == np.datetime64("2026-11-10T12:40", "ns")
+    assert len(cache.frames) == 6
+    t = np.array([np.datetime64("2026-11-10T13:30", "ns")])
+    cache(t, ["abi01c"])  # other variables: a separate frame
+    assert src.calls.count(t[0]) == 2
