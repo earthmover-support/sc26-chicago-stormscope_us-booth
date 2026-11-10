@@ -5,9 +5,9 @@ GOES-19 ABI CONUS observations (NOAA, AWS) -> Earth2Studio inference
 -> tile-ready RGB composites.
 
 It finds the freshest complete
-input window by listing NOAA's `noaa-goes19` bucket (`latest_goes_slot`), stores three
-composites, `true_color` (day), `clean_ir` (color-enhanced Clean IR 10.3 um, for
-night) and `water_vapor` (CIRA Simple Water Vapor RGB, day and night), and writes one Icechunk commit per init. Each 10-minute rollout step is handed
+input window by listing NOAA's `noaa-goes19` bucket (`latest_goes_slot`), stores two
+composites, `true_color` (day) and `water_vapor` (CIRA Simple Water Vapor RGB, day and
+night), and writes one Icechunk commit per init. Each 10-minute rollout step is handed
 to the backend's background writers as it is produced, so uploads overlap inference,
 and the commit at the end of the rollout publishes the whole init at once. It writes to
 the root group of `nvidia/sc26-chicago-stormscope_us-booth` (see ARRAYLAKE_REPO below).
@@ -78,7 +78,7 @@ HRRR_CRS = pyproj.CRS.from_cf(HRRR_LCC)
 HRRR_LCC["crs_wkt"] = HRRR_CRS.to_wkt()  # for GDAL/rioxarray
 
 # ============================================================================
-# COMPOSITES (pure numpy; tested in tests/test_composites.py)
+# COMPOSITES (pure numpy)
 # ============================================================================
 RGB_VALUES = np.array(["red", "green", "blue"])
 # The tiles service takes the `rgb` dim as R, G, B by position and reads only
@@ -93,7 +93,6 @@ RGB_ENCODING = {"valid_min": 0, "valid_max": 255}
 
 # ABI L2 CMI: C01-C06 are reflectance factors (0..1), C07-C16 brightness temperatures (K).
 TRUE_COLOR_CHANNELS = ["abi02c", "abi03c", "abi01c"]  # red 0.64, veggie 0.86, blue 0.47 um
-CLEAN_IR_CHANNEL = "abi13c"  # Clean IR longwave window 10.35 um
 # CIRA Simple Water Vapor RGB (quick guide, 2018): each band a brightness temperature (K)
 # stretched linearly from its warm end (0) to its cold end (1), gamma 1. NOAA's Air Mass
 # RGB would need C12 (9.6 um ozone), which StormScope-US does not predict.
@@ -106,21 +105,6 @@ WATER_VAPOR_BANDS = [  # (channel, warm K -> 0, cold K -> 1) for R, G, B
 # (x) -> byte (y), linear in between. It lifts dark surfaces and compresses bright cloud,
 # so land reads clearer and less hazy than a plain gamma 2.2 (compared on a real frame).
 TRUE_COLOR_STRETCH = ([0, 30, 60, 120, 190, 255], [0, 110, 160, 210, 240, 255])
-
-# Enhanced Clean IR color table: gray for everything warmer than -30 C (warm = dark,
-# so the ground is near-black at night and low cloud gray), color for cold cloud tops.
-# (brightness temperature K, (R, G, B)), linear in between, clamped at both ends.
-CLEAN_IR_TABLE = [
-    (183.15, (255, 255, 255)),  # -90 C  overshooting tops
-    (193.15, (120, 0, 0)),  # -80 C
-    (203.15, (255, 40, 0)),  # -70 C
-    (213.15, (255, 230, 0)),  # -60 C
-    (223.15, (0, 190, 70)),  # -50 C
-    (233.15, (0, 80, 220)),  # -40 C
-    (243.15, (110, 190, 255)),  # -30 C  end of the color scale
-    (243.16, (215, 215, 215)),  # start of the gray scale
-    (313.15, (8, 8, 8)),  # +40 C  hot ground
-]
 
 
 def _to_bytes(rgb01: np.ndarray) -> np.ndarray:
@@ -144,20 +128,6 @@ def true_color(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     return _to_bytes(rgb)
 
 
-def clean_ir(arr: np.ndarray, variables: list[str]) -> np.ndarray:
-    """Color-enhanced Clean IR (C13, 10.35 um) composite, for night-time viewing.
-
-    Brightness temperature (K) through `CLEAN_IR_TABLE`. Same (..., variable, y, x) ->
-    (..., y, x, rgb) uint8 contract as `true_color`.
-    """
-    bt = arr[..., list(variables).index(CLEAN_IR_CHANNEL), :, :]
-    temps = np.array([t for t, _ in CLEAN_IR_TABLE])
-    colors = np.array([c for _, c in CLEAN_IR_TABLE], dtype="float64") / 255
-    rgb = np.stack([np.interp(bt, temps, colors[:, i]) for i in range(3)], axis=-1)
-    rgb[np.isnan(bt)] = np.nan
-    return _to_bytes(rgb)
-
-
 def water_vapor(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     """CIRA Simple Water Vapor RGB from ABI C13 / C08 / C10, day and night.
 
@@ -174,17 +144,12 @@ def water_vapor(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     return _to_bytes(np.clip(rgb, 0, 1))
 
 
-COMPOSITES = {"true_color": true_color, "clean_ir": clean_ir, "water_vapor": water_vapor}
+COMPOSITES = {"true_color": true_color, "water_vapor": water_vapor}
 COMPOSITE_ATTRS = {
     "true_color": {
         "long_name": "CIMSS natural true-color RGB composite (ABI C02 / synthetic green / "
         "C01 reflectance, EUMETSAT contrast stretch), 0-255",
         "source_channels": " ".join(TRUE_COLOR_CHANNELS),
-    },
-    "clean_ir": {
-        "long_name": "color-enhanced Clean IR (ABI C13 10.35 um brightness temperature; "
-        "gray above -30 C, color scale for colder cloud tops), 0-255",
-        "source_channels": CLEAN_IR_CHANNEL,
     },
     "water_vapor": {
         "long_name": "CIRA Simple Water Vapor RGB composite (ABI C13 / C08 / C10 inverted "
@@ -483,7 +448,7 @@ def parse_args() -> argparse.Namespace:
 
 # ============================================================================
 # MODEL + IO (heavy imports deferred so the composites/freshness helpers above
-# import without torch / earth2studio, e.g. in tests)
+# import without torch / earth2studio)
 # ============================================================================
 def _heavy_imports():
     global torch, icechunk, earth2studio, IceChunkBackend, fetch_data, GOES
@@ -588,10 +553,10 @@ def fetch_initial_condition(model, goes, start_time: np.datetime64, device):
 
 
 def add_ensemble_dim(x, coords: dict, ensemble_size: int):
-    """Expand to (ensemble, time, lead_time, variable, ...)."""
+    """Expand to (ensemble, time, lead_time, variable, ...); members are numbered from 1, int8."""
     x = x.unsqueeze(0).expand(ensemble_size, *x.shape)
     coords = OrderedDict(coords)
-    coords["ensemble"] = np.arange(ensemble_size)
+    coords["ensemble"] = np.arange(1, ensemble_size + 1, dtype="int8")
     coords.move_to_end("ensemble", last=False)
     return x, coords
 
@@ -600,11 +565,12 @@ def add_coord(backend, name, values, dims, attrs=None, dtype=None, compressors=N
     """Write a non-dimension coordinate, e.g. 2-D `lat`/`lon` over `(y, x)`.
 
     `IceChunkBackend.add_array` would take an n-dimensional entry for the grid itself
-    and replace it with enumerated index dimensions.
+    and replace it with enumerated index dimensions. Every dimension but `time` is one
+    chunk, so `lat`/`lon` (1024 x 1792 for CONUS) load in a single read.
     """
     values = np.asarray(values, dtype=dtype)
     chunks = tuple(
-        CHUNKS[dim] if dim in ("y", "x") else COORD_TIME_CHUNK if dim == "time" else size
+        COORD_TIME_CHUNK if dim == "time" else size
         for dim, size in zip(dims, values.shape, strict=True)
     )
     if name not in backend.root:

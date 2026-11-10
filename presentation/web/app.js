@@ -99,8 +99,8 @@
     const H = (280.46061837 + 360.98564736629 * d + lon) * r - ra; // local hour angle
     return Math.sin(lat * r) * Math.sin(dec) + Math.cos(lat * r) * Math.cos(dec) * Math.cos(H) > 0;
   }
-  // True Color is black at night, so the page starts (and resets) on Clean IR while the venue is dark
-  const defaultVariable = () => (sunUp(S.cfg.station.lat, S.cfg.station.lon) ? "true_color" : "clean_ir");
+  // True Color is black at night, so the page starts (and resets) on Water Vapor while the venue is dark
+  const defaultVariable = () => (sunUp(S.cfg.station.lat, S.cfg.station.lon) ? "true_color" : "water_vapor");
   const selectableRuns = () => S.runs.slice(0, S.cfg.max_runs);
   // "Latest" = newest init; the pipeline commits each init whole, so every run has all leads
   const latestShown = () => selectableRuns()[0] || null;
@@ -116,7 +116,7 @@
       colorscalerange: v.colorscalerange,
       time: run.time,
       lead_time: `${lead} minutes`,
-      ensemble: "0",
+      ensemble: "1",
       f: "png",
       width: String(size),
       height: String(size),
@@ -425,10 +425,9 @@
 
   // ------------------------------------------------------------------ viz chrome
   // display names for the variable keys in config.json
-  const VAR_LABELS = { true_color: "True Color", clean_ir: "Clean IR", water_vapor: "Water Vapor" };
+  const VAR_LABELS = { true_color: "True Color", water_vapor: "Water Vapor" };
   const VAR_DEFINITIONS = {
     true_color: "True Color: an RGB composite showing clouds and Earth’s surface in daylight. A rendered satellite view, not a direct cloud-cover measurement.",
-    clean_ir: "Clean IR: the 10.3 µm infrared window, color-enhanced. Gray shows warm ground and low clouds; colors mark cold, high cloud tops of growing storms. Works day and night.",
     water_vapor: "Water Vapor: an RGB composite of two water-vapor channels and the infrared window. Green and black show dry air, blue and purple moist air, white high cloud; jet streams and troughs stand out. Works day and night.",
   };
   function setVariableHelp(button, name) {
@@ -1047,7 +1046,7 @@
     const status = $("#sqlStatus");
     const bars = $("#sqlBars");
     const box = sqlBox();
-    const metric = /AVG\(\s*(true_color|clean_ir|water_vapor)\s*\)/i.exec(r?.query || box.value);
+    const metric = /AVG\(\s*(true_color|water_vapor)\s*\)/i.exec(r?.query || box.value);
     const running = r && r.status === "running";
     status.classList.remove("err");
     status.title = "";
@@ -1200,7 +1199,6 @@
       else if (k === "o") toggleLoop();
       else if (k === "s") { const names = Object.keys(SPEEDS); setSpeed(names[(names.indexOf(S.speed) + 1) % names.length]); }
       else if (k === "t") setVariable("true_color");
-      else if (k === "i") setVariable("clean_ir");
       else if (k === "w") setVariable("water_vapor");
       else if (k === "l") selectInit(0);
       else if (k === "c") setStripCollapsed(!$(".app").classList.contains("strip-collapsed"));
