@@ -141,7 +141,11 @@ and `nvidia-smi` finds no devices. The `DL` AMI (Deep Learning Base OSS Nvidia D
 works on all GPU types.
 
 **Pass `--keepalive`** (for example `4h`). With `--detach` and no keepalive, Coiled stops
-the VM 10 ms after the command exits, and that GPU can be gone on the next launch. A
+the VM 10 ms after the command exits, and that GPU can be gone on the next launch. It
+also stopped the VM while the command was still running: twice it ended during the
+bootstrap's first `pip install` (clusters 2352426 and 2355602), but never with a keepalive.
+`scripts/coiled_gpu_benchmark.sh` therefore uses `--keepalive 30m` and stops each cluster
+itself when the run is done. A
 later `coiled run` with the same `--name` reuses the running VM. Stop it with
 `uv run coiled cluster stop --workspace earthmover-devs <name>`.
 

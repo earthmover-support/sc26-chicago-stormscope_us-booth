@@ -2,8 +2,10 @@
 # Benchmark the pipeline on several Coiled GPU instance types, one after another.
 #
 # Each instance type runs 4 live inits (one per 5-min GOES scan) and publishes them to
-# the Arraylake booth repo, then the VM stops. The run uses --detach without --keepalive:
-# Coiled stops the VM 10 ms after the command exits. --skip-ssd-mount: on g6e.4xlarge
+# the Arraylake booth repo, then the VM stops. The run uses --detach with --keepalive 30m:
+# without a keepalive, Coiled stopped the VM during the first pip install (clusters 2352426,
+# 2355602); with one, runs worked. So this script stops each cluster itself as soon as the
+# VM log shows `--max-runs ... reached` or a bootstrap `done`/`FAILED`. --skip-ssd-mount: on g6e.4xlarge
 # with the DL AMI, formatting the local NVMe failed ("Device or resource busy"), /scratch
 # was missing and Coiled stopped the cluster (2026-11-10). `timeout` in the VM caps the
 # pipeline, and this script stops the cluster itself if it is still up after MAX_WAIT.
@@ -45,7 +47,7 @@ for vm in "${VM_TYPES[@]}"; do
         uv run coiled run --workspace earthmover-devs --name "stormscope-us-bench-${vm//./-}" \
             --region us-east-1 --ami-version DL --vm-type "$vm" \
             --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
-            --docker-shm-size "1 GiB" --file scripts/ --detach --skip-ssd-mount \
+            --docker-shm-size "1 GiB" --file scripts/ --detach --skip-ssd-mount --keepalive 30m \
             --env ARRAYLAKE_API_TOKEN="$ARRAYLAKE_API_TOKEN" \
             -- timeout "$HARD_CAP" bash scripts/coiled_bootstrap.sh --n-steps 12 \
                --max-runs "$RUNS" --publish-target arraylake \
@@ -67,6 +69,13 @@ for vm in "${VM_TYPES[@]}"; do
             sleep 60
             st=$(state "$id")
             case "$st" in stopped|error) break;; esac
+            if uv run coiled logs --workspace earthmover-devs --cluster "$id" --label none 2>/dev/null \
+                | sed 's/\x1b\[[0-9;]*m//g' | grep -qE "max-runs [0-9]+ reached|\[bootstrap\] .*(done|FAILED)"; then
+                echo "$(date -u +%H:%M:%SZ) ${vm}: run finished, stopping cluster ${id}" | tee -a logs/bench/progress.log
+                sleep 20  # let the last log lines ship
+                uv run coiled cluster stop --workspace earthmover-devs "$id" >/dev/null 2>&1
+                break
+            fi
             if [ $(( $(date +%s) - start )) -gt $MAX_WAIT ]; then
                 echo "$(date -u +%H:%M:%SZ) ${vm}: still ${st} after ${MAX_WAIT}s, stopping it" | tee -a logs/bench/progress.log
                 uv run coiled cluster stop --workspace earthmover-devs "$id" >/dev/null 2>&1
