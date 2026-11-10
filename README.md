@@ -158,5 +158,3 @@ or a step not written yet) are 0, the Zarr `fill_value`; there is no CF `_FillVa
   temperatures, linear, gamma 1: R = C13 278.96→202.29 K (cloud height), G = C08 (6.19 µm)
   242.67→214.66 K (upper-level moisture), B = C10 (7.34 µm) 261.03→245.12 K (low-to-mid
   moisture). NOAA's Air Mass RGB would need C12 (9.6 µm), which StormScope-US does not predict.
-
-![Composites on an observed GOES-19 scan](docs/composites_sample.jpg)
