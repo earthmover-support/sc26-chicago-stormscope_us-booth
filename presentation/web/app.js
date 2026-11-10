@@ -425,10 +425,11 @@
 
   // ------------------------------------------------------------------ viz chrome
   // display names for the variable keys in config.json
-  const VAR_LABELS = { true_color: "True Color", clean_ir: "Clean IR" };
+  const VAR_LABELS = { true_color: "True Color", clean_ir: "Clean IR", water_vapor: "Water Vapor" };
   const VAR_DEFINITIONS = {
     true_color: "True Color: an RGB composite showing clouds and Earth’s surface in daylight. A rendered satellite view, not a direct cloud-cover measurement.",
     clean_ir: "Clean IR: the 10.3 µm infrared window, color-enhanced. Gray shows warm ground and low clouds; colors mark cold, high cloud tops of growing storms. Works day and night.",
+    water_vapor: "Water Vapor: an RGB composite of two water-vapor channels and the infrared window. Green and black show dry air, blue and purple moist air, white high cloud; jet streams and troughs stand out. Works day and night.",
   };
   function setVariableHelp(button, name) {
     const definition = VAR_DEFINITIONS[name] || name.replaceAll("_", " ");
@@ -1046,7 +1047,7 @@
     const status = $("#sqlStatus");
     const bars = $("#sqlBars");
     const box = sqlBox();
-    const metric = /AVG\(\s*(true_color|clean_ir)\s*\)/i.exec(r?.query || box.value);
+    const metric = /AVG\(\s*(true_color|clean_ir|water_vapor)\s*\)/i.exec(r?.query || box.value);
     const running = r && r.status === "running";
     status.classList.remove("err");
     status.title = "";
@@ -1200,6 +1201,7 @@
       else if (k === "s") { const names = Object.keys(SPEEDS); setSpeed(names[(names.indexOf(S.speed) + 1) % names.length]); }
       else if (k === "t") setVariable("true_color");
       else if (k === "i") setVariable("clean_ir");
+      else if (k === "w") setVariable("water_vapor");
       else if (k === "l") selectInit(0);
       else if (k === "c") setStripCollapsed(!$(".app").classList.contains("strip-collapsed"));
       else if (/^[1-9]$/.test(k)) selectInit(Number(k) - 1);

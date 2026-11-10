@@ -5,9 +5,9 @@ GOES-19 ABI CONUS observations (NOAA, AWS) -> Earth2Studio inference
 -> tile-ready RGB composites.
 
 It finds the freshest complete
-input window by listing NOAA's `noaa-goes19` bucket (`latest_goes_slot`), stores two
-composites, `true_color` (day) and `clean_ir` (color-enhanced Clean IR 10.3 um, for
-night), and writes one Icechunk commit per init. Each 10-minute rollout step is handed
+input window by listing NOAA's `noaa-goes19` bucket (`latest_goes_slot`), stores three
+composites, `true_color` (day), `clean_ir` (color-enhanced Clean IR 10.3 um, for
+night) and `water_vapor` (CIRA Simple Water Vapor RGB, day and night), and writes one Icechunk commit per init. Each 10-minute rollout step is handed
 to the backend's background writers as it is produced, so uploads overlap inference,
 and the commit at the end of the rollout publishes the whole init at once. It writes to
 the root group of `nvidia/sc26-chicago-stormscope_us-booth` (see ARRAYLAKE_REPO below).
@@ -94,7 +94,18 @@ RGB_ENCODING = {"valid_min": 0, "valid_max": 255}
 # ABI L2 CMI: C01-C06 are reflectance factors (0..1), C07-C16 brightness temperatures (K).
 TRUE_COLOR_CHANNELS = ["abi02c", "abi03c", "abi01c"]  # red 0.64, veggie 0.86, blue 0.47 um
 CLEAN_IR_CHANNEL = "abi13c"  # Clean IR longwave window 10.35 um
-TRUE_COLOR_GAMMA = 2.2
+# CIRA Simple Water Vapor RGB (quick guide, 2018): each band a brightness temperature (K)
+# stretched linearly from its warm end (0) to its cold end (1), gamma 1. NOAA's Air Mass
+# RGB would need C12 (9.6 um ozone), which StormScope-US does not predict.
+WATER_VAPOR_BANDS = [  # (channel, warm K -> 0, cold K -> 1) for R, G, B
+    ("abi13c", 278.96, 202.29),  # clean IR 10.35 um: cloud-top / surface temperature
+    ("abi08c", 242.67, 214.66),  # upper-level WV 6.19 um
+    ("abi10c", 261.03, 245.12),  # lower-level WV 7.34 um
+]
+# EUMETSAT true-color contrast curve, as in the Berlin (FCI) pipeline: reflectance *255
+# (x) -> byte (y), linear in between. It lifts dark surfaces and compresses bright cloud,
+# so land reads clearer and less hazy than a plain gamma 2.2 (compared on a real frame).
+TRUE_COLOR_STRETCH = ([0, 30, 60, 120, 190, 255], [0, 110, 160, 210, 240, 255])
 
 # Enhanced Clean IR color table: gray for everything warmer than -30 C (warm = dark,
 # so the ground is near-black at night and low cloud gray), color for cold cloud tops.
@@ -123,13 +134,13 @@ def true_color(arr: np.ndarray, variables: list[str]) -> np.ndarray:
 
     ABI has no green band; the CIMSS recipe synthesizes one as
     0.45 red + 0.10 veggie (0.86 um) + 0.45 blue. Each band is clipped to 0..1 and
-    gamma-stretched (1/2.2). Takes a (..., variable, y, x) rollout step and returns
-    (..., y, x, rgb) uint8 as stored; NaN (outside the GOES view or the region) -> 0.
+    put through the EUMETSAT contrast curve `TRUE_COLOR_STRETCH`. Takes a
+    (..., variable, y, x) rollout step and returns (..., y, x, rgb) uint8 as stored; NaN (outside the GOES view or the region) -> 0.
     """
     red, veggie, blue = (arr[..., list(variables).index(ch), :, :] for ch in TRUE_COLOR_CHANNELS)
     green = 0.45 * red + 0.10 * veggie + 0.45 * blue
     rgb = np.stack([red, green, blue], axis=-1)
-    rgb = np.clip(rgb, 0, 1) ** (1 / TRUE_COLOR_GAMMA)
+    rgb = np.interp(np.clip(rgb, 0, 1) * 255, *TRUE_COLOR_STRETCH) / 255
     return _to_bytes(rgb)
 
 
@@ -147,17 +158,38 @@ def clean_ir(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     return _to_bytes(rgb)
 
 
-COMPOSITES = {"true_color": true_color, "clean_ir": clean_ir}
+def water_vapor(arr: np.ndarray, variables: list[str]) -> np.ndarray:
+    """CIRA Simple Water Vapor RGB from ABI C13 / C08 / C10, day and night.
+
+    Red is cloud height, green upper-level moisture, blue low-to-mid-level moisture.
+    Same (..., variable, y, x) -> (..., y, x, rgb) uint8 contract as `true_color`.
+    """
+    rgb = np.stack(
+        [
+            (arr[..., list(variables).index(ch), :, :] - warm) / (cold - warm)
+            for ch, warm, cold in WATER_VAPOR_BANDS
+        ],
+        axis=-1,
+    )
+    return _to_bytes(np.clip(rgb, 0, 1))
+
+
+COMPOSITES = {"true_color": true_color, "clean_ir": clean_ir, "water_vapor": water_vapor}
 COMPOSITE_ATTRS = {
     "true_color": {
         "long_name": "CIMSS natural true-color RGB composite (ABI C02 / synthetic green / "
-        "C01 reflectance, gamma 2.2), 0-255",
+        "C01 reflectance, EUMETSAT contrast stretch), 0-255",
         "source_channels": " ".join(TRUE_COLOR_CHANNELS),
     },
     "clean_ir": {
         "long_name": "color-enhanced Clean IR (ABI C13 10.35 um brightness temperature; "
         "gray above -30 C, color scale for colder cloud tops), 0-255",
         "source_channels": CLEAN_IR_CHANNEL,
+    },
+    "water_vapor": {
+        "long_name": "CIRA Simple Water Vapor RGB composite (ABI C13 / C08 / C10 inverted "
+        "brightness temperatures), 0-255",
+        "source_channels": " ".join(ch for ch, _, _ in WATER_VAPOR_BANDS),
     },
 }
 
@@ -632,6 +664,20 @@ def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
     return backend, location
 
 
+def add_composite_array(backend, name: str, shape, chunks, dims) -> None:
+    """Allocate one uint8 RGB composite array (no data written) with its attributes."""
+    backend.root.create_array(
+        name,
+        shape=shape,
+        chunks=chunks,
+        dtype=RGB_DTYPE,
+        fill_value=RGB_FILL,
+        dimension_names=dims,
+        compressors=backend.zarr_codecs,
+    )
+    backend.root[name].attrs.update({**GEOREF, **RGB_ENCODING, **COMPOSITE_ATTRS[name]})
+
+
 def create_schema(backend, model, coords, lead_time: np.ndarray, region) -> None:
     """Allocate the cube in an empty repo, sized for this run's init alone.
 
@@ -651,16 +697,13 @@ def create_schema(backend, model, coords, lead_time: np.ndarray, region) -> None
     # Created directly: `add_array` takes its dtype from initial data only, and passing
     # data would write every chunk of the cube.
     for name in COMPOSITES:
-        backend.root.create_array(
+        add_composite_array(
+            backend,
             name,
             shape=[len(values) for values in rgb_coords.values()],
             chunks=[backend.chunks.get(dim, len(values)) for dim, values in rgb_coords.items()],
-            dtype=RGB_DTYPE,
-            fill_value=RGB_FILL,
-            dimension_names=list(rgb_coords),
-            compressors=backend.zarr_codecs,
+            dims=list(rgb_coords),
         )
-        backend.root[name].attrs.update({**GEOREF, **RGB_ENCODING, **COMPOSITE_ATTRS[name]})
     backend.root["rgb"].attrs.update(RGB_BAND_ATTRS)
     latlon_codec = [BloscCodec(cname="zstd", clevel=3, shuffle="shuffle")]
     add_coord(
@@ -732,11 +775,16 @@ def extend_schema(backend, time_: np.ndarray, lead_time: np.ndarray, y: np.ndarr
 
     The rollout steps then fill the new `time` slice in the same session, and one
     commit publishes both. An init already in `time` is a rerun: its slice is
-    overwritten in place.
+    overwritten in place. A composite added to `COMPOSITES` after the repo was created
+    is allocated like `true_color`; its earlier inits stay fill (transparent).
     """
+    ref = backend.root["true_color"]  # every composite shares its shape and chunks
     for name in COMPOSITES:
-        if name not in backend.root or backend.root[name].dtype != RGB_DTYPE:
+        if name not in backend.root:
+            add_composite_array(backend, name, ref.shape, ref.chunks, ref.metadata.dimension_names)
+        if backend.root[name].dtype != RGB_DTYPE:
             raise ValueError(f"repo has no {RGB_DTYPE} {name}; publish to an empty repo or branch")
+        backend.root[name].attrs.update(COMPOSITE_ATTRS[name])  # recipe changes reach old repos
     stored_lead = backend.root["lead_time"][:]
     if not np.array_equal(stored_lead, lead_time):
         raise ValueError(

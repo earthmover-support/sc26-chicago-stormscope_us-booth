@@ -6,7 +6,7 @@ delete them when done.
 ## To decide
 
 - [ ] Clean IR color table (`CLEAN_IR_TABLE` in `scripts/stormscope_us_pipeline.py`): gray from +40 °C to −30 °C, then light blue −30 / blue −40 / green −50 / yellow −60 / red −70 / dark red −80 / white −90 °C. OK, or name a specific one, e.g. NOAA/CIMSS "Rainbow IR" or the AVN enhancement? Judge it on a real run; to discuss with colleagues.
-- [ ] True color recipe: is CIMSS natural true color (synthetic green 0.45·C02 + 0.10·C03 + 0.45·C01, gamma 2.2) OK? Judge it on a real run; to discuss with colleagues.
+- [ ] True color recipe: gamma 2.2 looked hazy (Jussi, 2026-11-10); now the CIMSS synthetic green (0.45·C02 + 0.10·C03 + 0.45·C01) with the EUMETSAT contrast curve from the Berlin demo. Still no Rayleigh correction (satpy `true_color` uses pyspectral for it), so some blue haze stays over land. Good enough, or add Rayleigh + solar-zenith correction?
 - [ ] Cheaper GPU: the pipeline uses only ~11 GB of GPU memory. All L40S sizes measured run at the same speed (~45 s per forecast); `g6e.xlarge` ($1.86/h) is now the default. Not yet benchmarked: `g6e.2xlarge` ($2.24/h, not expected to change anything), `g6.xlarge` (L4, $0.80/h) and `g5.xlarge` (A10G, $1.01/h). L4/A10G would add ~1.5–2 min latency and break the "5 minutes" slide claim. TODO rows in [docs/GPU.md, Inference timing log](docs/GPU.md#inference-timing-log).
 
 ## Done

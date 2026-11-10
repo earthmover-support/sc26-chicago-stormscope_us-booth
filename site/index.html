@@ -38,7 +38,7 @@
   .row { display: flex; gap: 6px; align-items: center; }
   select, button { font: inherit; border-radius: 0; cursor: pointer; }
   select { width: 100%; padding: 6px; background: var(--surface); color: var(--text); border: 1px solid var(--border2); }
-  .pill { flex: 1; padding: 7px 10px; background: transparent; color: var(--text-dim); border: 1px solid var(--border2); }
+  .pill { flex: 1; padding: 7px 6px; white-space: nowrap; background: transparent; color: var(--text-dim); border: 1px solid var(--border2); }
   .pill:hover, .pill.active { border-color: var(--green); color: var(--green); }
   .pill.active { background: var(--green-dim); }
   #play { width: 32px; height: 32px; flex-shrink: 0; background: var(--green); color: #000; border: none; }
@@ -79,6 +79,7 @@
     <div class="row" id="vars">
       <button class="pill active" data-var="true_color">True color</button>
       <button class="pill" data-var="clean_ir">Clean IR</button>
+      <button class="pill" data-var="water_vapor">Water vapor</button>
     </div>
   </div>
   <div id="playback">
