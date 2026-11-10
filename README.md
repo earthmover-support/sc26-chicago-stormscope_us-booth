@@ -128,7 +128,7 @@ uv run python scripts/stormscope_us_pipeline.py --publish-target arraylake
 |---|---|---|
 | `--start-time` | freshest slot with all 6 input frames listed | ISO 8601 UTC on a 10-min boundary. If the bucket can't be listed, falls back to 30 min behind now. |
 | `--min-lag` | `0` | minutes a slot must be past its slot time to be considered |
-| `--wait-seconds` | `15` | sleep before looking again when there is no new init or a pass failed |
+| `--wait-seconds` | `5` | sleep before looking again when there is no new init or a pass failed |
 | `--n-steps` | `12` | 10-min steps |
 | `--region` | `$STORMSCOPE_REGION` or full CONUS | `lat_min,lat_max,lon_min,lon_max` (west negative); Flash `set_domain` with 25 px context, stored cropped |
 | `--output-dir` | `outputs` | local Icechunk store |
