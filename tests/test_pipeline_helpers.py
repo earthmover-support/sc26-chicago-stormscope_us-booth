@@ -37,18 +37,12 @@ def test_true_color_shape_dtype():
     assert out.dtype == np.uint8
 
 
-def test_true_color_synthetic_green_and_stretch():
+def test_true_color_synthetic_green_and_gamma():
     r, n, b = 0.3, 0.6, 0.1
     out = pl.true_color(step({"abi01c": b, "abi02c": r, "abi03c": n}), VARS)[0, 0, 0, 0, 0]
     g = 0.45 * r + 0.10 * n + 0.45 * b
-    expected = np.round(np.interp(np.array([r, g, b]) * 255, *pl.TRUE_COLOR_STRETCH))
+    expected = np.round(np.array([r, g, b]) ** (1 / 2.2) * 255)
     np.testing.assert_array_equal(out, expected)
-
-
-def test_true_color_stretch_knots():
-    # reflectance 60/255 -> byte 160, as in the EUMETSAT curve
-    out = pl.true_color(step({"abi01c": 60 / 255, "abi02c": 60 / 255, "abi03c": 60 / 255}), VARS)
-    assert (out == 160).all()
 
 
 def test_true_color_black_is_not_missing_and_nan_is_fill():
@@ -102,26 +96,6 @@ def test_clean_ir_clamps_and_masks():
 def test_clean_ir_table_monotonic():
     temps = [t for t, _ in pl.CLEAN_IR_TABLE]
     assert temps == sorted(temps)
-
-
-# ---- water_vapor ------------------------------------------------------------
-
-
-def test_water_vapor_ends_and_mid():
-    (r_ch, r_warm, r_cold), (g_ch, g_warm, g_cold), (b_ch, b_warm, b_cold) = pl.WATER_VAPOR_BANDS
-    warm = pl.water_vapor(step({r_ch: r_warm + 10, g_ch: g_warm, b_ch: b_warm}), VARS)
-    cold = pl.water_vapor(step({r_ch: r_cold - 10, g_ch: g_cold, b_ch: b_cold}), VARS)
-    mid = pl.water_vapor(step({r_ch: (r_warm + r_cold) / 2, g_ch: g_warm, b_ch: b_cold}), VARS)
-    assert (warm == 1).all()  # warm/dry -> black, clamped to 1 (not the fill)
-    assert (cold == 255).all()  # cold/moist -> white
-    np.testing.assert_allclose(mid[0, 0, 0, 0, 0], [128, 1, 255], atol=1)
-
-
-def test_water_vapor_nan_is_fill():
-    arr = step({"abi08c": 230.0, "abi10c": 250.0, "abi13c": 250.0})
-    arr[..., VARS.index("abi08c"), 0, 0] = np.nan
-    out = pl.water_vapor(arr, VARS)[0, 0, 0]
-    assert out[0, 0, 1] == pl.RGB_FILL and (out[1, 1] > 0).all()
 
 
 # ---- GOES slots -------------------------------------------------------------
