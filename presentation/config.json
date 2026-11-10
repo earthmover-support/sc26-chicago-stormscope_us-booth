@@ -21,7 +21,7 @@
   "history_depth": 240,
 
   "panel_seconds": 25,
-  "playback_speed": "slow",
+  "playback_speed": "medium",
   "hold_ms": 2000,
   "attract_reset_s": 180,
   "timezone": "America/Chicago",

@@ -1174,12 +1174,12 @@
     setInterval(() => {
       if (Date.now() - lastInput < secs * 1000) return;
       const dirty = !S.loop || S.animPaused || S.rotatePaused || S.selInit || S.variable !== defaultVariable() ||
-        S.speed !== (S.cfg.playback_speed in SPEEDS ? S.cfg.playback_speed : "slow") || $(".app").classList.contains("strip-collapsed");
+        S.speed !== (S.cfg.playback_speed in SPEEDS ? S.cfg.playback_speed : "medium") || $(".app").classList.contains("strip-collapsed");
       if (!dirty) return;
       lastInput = Date.now();
       S.loop = true; $("#loopLabel").setAttribute("aria-pressed", "true");
       S.animPaused = false; S.rotatePaused = false; S.selInit = null;
-      S.speed = S.cfg.playback_speed in SPEEDS ? S.cfg.playback_speed : "slow";
+      S.speed = S.cfg.playback_speed in SPEEDS ? S.cfg.playback_speed : "medium";
       setStripCollapsed(false);
       if (S.variable !== defaultVariable()) setVariable(defaultVariable()); else syncLayers(true);
       renderPlayback(); renderInits(); showFrame(); scheduleAnim(); showPanel(S.panel);
