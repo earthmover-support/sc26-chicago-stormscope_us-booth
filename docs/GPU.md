@@ -185,7 +185,7 @@ member.
 | 2026-11-09 21:11–21:26 | 2352507 | g6e.8xlarge | L40S 48 GB | 12 | 3.3–6.4 | - | 3.4–4.0 (rollout+write 40.4–48.0 s / 12) | 0.5–0.7 | OK, continuous, inits 21:05–21:20 every 5 min; total 44.3–54.9 s; published ~6 min after slot time |
 | 2026-11-10 08:15–08:30 | 2355678 | g6e.4xlarge | L40S 48 GB | 12 | 3.7 | - | 3.3 (rollout+write 40.0 s / 12) | 0.6 | OK, benchmark, 4 live inits, mean of the last 3: total 44.2 s (first, cold compile cache: 62.2 s); $3.00/h, $0.037 per forecast; same speed as g6e.8xlarge (45.0 s) at 66% of the price |
 | TODO | | `g6e.2xlarge` | L40S 48 GB | 12 | | | | | to check: same GPU, 8 vCPU / 64 GB RAM, $2.24/h, cheaper than g6e.4xlarge ($3.00/h) |
-| TODO | | `g6e.xlarge` | L40S 48 GB | 12 | | | | | to check: same GPU, $1.86/h (−59%); 4 vCPU / 32 GB RAM may slow fetch or upload |
+| 2026-11-10 09:11–09:25 | 2355854 | g6e.xlarge | L40S 48 GB | 12 | 4.5 | - | 3.4 (rollout+write 40.5 s / 12) | 0.6 | OK, benchmark, 4 live inits, mean of the last 3: total 45.5 s (first, cold compile cache: 83.5 s; 4 vCPU slow the warmup); $1.86/h, $0.024 per forecast; same steady-state speed as g6e.4xlarge/8xlarge at 62% / 41% of their price |
 | TODO | | `g6.xlarge` | L4 24 GB | 12 | | | | | to check: $0.80/h (−82%); estimated 2–2.5 min per forecast |
 | TODO | | `g5.xlarge` | A10G 24 GB | 12 | | | | | to check: $1.01/h (−78%); estimated 2–3 min per forecast |
 
