@@ -3,10 +3,6 @@
 Things only you can fix or decide. Claude keeps this list current; tick items off or
 delete them when done.
 
-## To fix
-
-- [ ] Hosted presentation token rejected (2026-11-10): `/api/state` on the Vercel project `sc26-chicago-stormscope-us-booth` gets `403 Access Denied` from `api.earthmover.io/repos/nvidia/sc26-chicago-stormscope_us-booth/open`. The repo itself is healthy and readable with other credentials, so the `ARRAYLAKE_API_TOKEN` set in Vercel has no read access to this repo (wrong principal, not in the `nvidia` org, or revoked). Mint a read-only token that can open the repo, ask the Earthmover colleagues to replace the Vercel env var, then redeploy (env changes need a redeploy).
-
 ## To decide
 
 - [ ] Clean IR color table (`CLEAN_IR_TABLE` in `scripts/stormscope_us_pipeline.py`): gray from +40 °C to −30 °C, then light blue −30 / blue −40 / green −50 / yellow −60 / red −70 / dark red −80 / white −90 °C. OK, or name a specific one, e.g. NOAA/CIMSS "Rainbow IR" or the AVN enhancement? Judge it on a real run; to discuss with colleagues.
