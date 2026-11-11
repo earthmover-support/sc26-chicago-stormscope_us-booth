@@ -1,17 +1,18 @@
 # sc26-chicago-stormscope_us-booth
 
-StormScope-US nowcasting on GOES-19 ABI over the contiguous US, streamed into Arraylake --
-the booth demo for SC26 Chicago (McCormick Place, 15–20 November 2026). The deployed
-pipeline goes offline after the event.
+The booth demo for SC26 Chicago, McCormick Place, 15 to 20 November 2026. It runs
+StormScope-US nowcasts on GOES-19 ABI data over the contiguous US and streams them into
+Arraylake. We stop the deployed pipeline after the event.
 
 ## Links
 
 - Earth2Studio example: https://nvidia.github.io/earth2studio/main/examples/04_nowcasting/03_stormscope_goes_example/
 - Arraylake repo: https://app.earthmover.io/nvidia/sc26-chicago-stormscope_us-booth
-- Hosted presentation: https://nvidia-sc26-chicago.earthmover.io/, centred on another
-  venue with `?location=` (a name from `sql.places` in
-  [`presentation/config.json`](presentation/config.json); a browser that already allows
-  location access uses its own position instead):
+- Hosted presentation: https://nvidia-sc26-chicago.earthmover.io/. To centre it on another
+  venue, add `?location=` with a name from `sql.places` in
+  [`presentation/config.json`](presentation/config.json). A browser that already allows
+  location access uses its own position instead. See
+  ["Here"](presentation/README.md#here) for the rules.
   - SC26 Chicago (default): https://nvidia-sc26-chicago.earthmover.io/?location=SC26%20Chicago
   - GTC DC: https://nvidia-sc26-chicago.earthmover.io/?location=GTC%20DC
   - AGU26 SF: https://nvidia-sc26-chicago.earthmover.io/?location=AGU26%20SF
@@ -20,78 +21,124 @@ pipeline goes offline after the event.
 - Mobile viewer: https://nvidia-sc26-chicago-viewer.earthmover.io/
 
 [`scripts/stormscope_us_pipeline.py`](scripts/stormscope_us_pipeline.py) runs
-`StormScopeGOES` (`3km_10min_flash`, earth2studio 0.20.0) end to end: find the newest
-10-minute slot whose six input frames (`T`-50 … `T`) are on NOAA's public `noaa-goes19`
-bucket, roll the model forward autoregressively in 10-minute steps on the 3 km HRRR grid,
-and write each step to Icechunk on Arraylake as it is produced. GOES-19 files are on S3
-about 4.3 min after their slot time and need no credentials, so the pipeline runs a few
-minutes behind real time. No MRMS radar. See [Pipeline script](#pipeline-script) and
+`StormScopeGOES` (`3km_10min_flash`, earth2studio 0.20.0) end to end:
+
+1. Find the newest 10-minute slot `T` whose six input frames, `T`-50 to `T`, are on NOAA's
+   public `noaa-goes19` bucket.
+2. Roll the model forward in 10-minute steps on the 3 km HRRR grid.
+3. Write each step to Icechunk on Arraylake as soon as the model produces it.
+
+GOES-19 files reach S3 about 4.3 min after their slot time and need no credentials. The
+pipeline therefore runs a few minutes behind real time. It uses no MRMS radar. See
+[Pipeline script](#pipeline-script) and
 [docs/END2END_NEARREALTIME_PERFORMANCE.md](docs/END2END_NEARREALTIME_PERFORMANCE.md).
 
 ## Deployments
 
 | | Runs as | Live SQL | Audience | URL |
 |---|---|---|---|---|
-| **Booth presentation** ([`presentation/`](presentation/)) | `uv run presentation/server.py` on the booth machine, full screen on the TV | editable | SC26 visitors | `http://localhost:8000` on the booth machine |
-| **Hosted presentation** ([`presentation/`](presentation/)) | Vercel project `sc26-chicago-stormscope-us-booth`, root directory `presentation` | fixed: the venue queries only, cached per init | internal sharing, unlisted URL | `nvidia-sc26-chicago.earthmover.io` |
-| **Mobile site** ([`site/`](site/)) | Vercel project `sc26-chicago-stormscope-us-booth-site`, root directory `site`, static | none | phones, via the booth QR code | `nvidia-sc26-chicago-viewer.earthmover.io` |
+| Booth presentation ([`presentation/`](presentation/README.md)) | `uv run presentation/server.py` on the booth machine, full screen on the TV | editable | SC26 visitors | `http://localhost:8000` on the booth machine |
+| Hosted presentation ([`presentation/`](presentation/README.md#hosted-on-vercel)) | Vercel project `sc26-chicago-stormscope-us-booth`, root directory `presentation` | fixed: the venue queries only, cached per init | internal sharing, unlisted URL | `nvidia-sc26-chicago.earthmover.io` |
+| Mobile site ([`site/`](site/README.md)) | Vercel project `sc26-chicago-stormscope-us-booth-site`, root directory `site`, static | none | phones, through the booth QR code | `nvidia-sc26-chicago-viewer.earthmover.io` |
 
-The domains follow the GTC Berlin pattern. The Vercel project names use hyphens only, so
-the `*.vercel.app` fallback domains are not truncated.
+The domains follow the GTC Berlin pattern. The Vercel project names use only hyphens, so
+Vercel does not truncate the `*.vercel.app` fallback domains.
 
-Both presentation deployments serve the same `presentation/web/` page and the same logic in
-`presentation/booth.py`. The difference is the `sql_editable` flag in `/api/config`:
-`server.py` answers `true`, the Vercel functions in `presentation/api/` answer `false`.
+Both presentation deployments serve the same `presentation/web/` page and use the same
+logic in `presentation/booth.py`. Only the `sql_editable` flag in `/api/config` differs.
+`server.py` answers `true`. The Vercel functions in `presentation/api/` answer `false`.
 
 ## Viz
 
-Tiles come from a public Arraylake tiles service in the `nvidia` org
-(`tiles-dd7cd36ec0562874.compute.arraylake.app`, set as `tile_base`). Public, because the booth screen and phones fetch
-tiles straight from the browser, which can't attach an `Authorization` header; rendered
-tiles are reachable by anyone holding the URL, the underlying chunks stay private. Run it
-in us-east-1 next to the data, with replicas pinned during booth hours:
+### Tiles service
+
+The tiles come from a public Arraylake tiles service in the `nvidia` org,
+`tiles-dd7cd36ec0562874.compute.arraylake.app`. Its URL is `tile_base` in
+`presentation/config.json` and `TILES` in `site/index.html` and in both `api/tiles.js`
+files. Change all four together.
+
+The service must be public because the booth screen and the phones fetch tiles directly
+from the browser, and a browser cannot attach an `Authorization` header. Anyone with a tile
+URL can fetch the rendered tile. The underlying chunks stay private. Run the service in
+us-east-1 next to the data, and pin the replicas during booth hours:
 
 ```
 al compute enable nvidia tiles --sku-code s --is-public
 al compute update nvidia <tiles-id> --min-replicas 8 --max-replicas 8
 ```
 
-Set `--min-replicas 0` after booth hours and `al compute disable` after the event.
+After booth hours, set `--min-replicas 0`. After the event, run `al compute disable`.
 
-Render parameters for `true_color` and `water_vapor`:
+The service keeps no cache of rendered tiles. Each pod caches on its own and starts empty.
+
+### Render parameters
+
+These parameters apply to `true_color` and `water_vapor`:
 
 | Parameter | Value | Why |
 | --- | --- | --- |
-| `style` | `raster/rgb` | Real 3-band composite; pass `variables=true_color` with no `rgb` selector. |
-| `colorscalerange` | `0,255` | Both composites are stored as uint8 0–255 (see [Pipeline script](#pipeline-script)). |
-| `lead_time` | `PT10M` | 13 frames: 0, 10, …, 120 minutes. 0 is the observed satellite frame, the rest forecast. |
-| `ensemble` | `1` | Single member (int8, numbered from 1); required because every variable is 5-D. |
+| `style` | `raster/rgb` | Real 3-band composite. Pass `variables=true_color` with no `rgb` selector. |
+| `colorscalerange` | `0,255` | The pipeline stores both composites as uint8 0–255 (see [Pipeline script](#pipeline-script)). |
+| `lead_time` | `PT10M` | 13 frames: 0, 10, …, 120 minutes. Lead 0 is the observed satellite frame. The other 12 are forecast. |
+| `ensemble` | `1` | Single member, int8, numbered from 1. Every variable is 5-D, so this parameter is required. |
 
-`true_color` is black on the night side; use `water_vapor` there (the booth page and the
-viewer pick it automatically while it is dark at the venue). It works day and night and
-shows cloud height and moist and dry air.
+`true_color` is black on the night side. `water_vapor` works day and night and shows cloud
+height and moist and dry air. The booth page and the mobile viewer therefore start on
+`water_vapor` while it is dark at the venue.
+
+### Tile proxy
+
+The Vercel deployments do not send the browser to the tiles service directly. On any
+`https:` origin, the page requests `/tiles/...`, and `vercel.json` rewrites that path to
+`api/tiles.js`. This function is the same in [`site/api/`](site/api/tiles.js) and
+[`presentation/api/`](presentation/api/tiles.js). It is a Node.js function pinned to
+`iad1`. Move it next to the tiles service's region once that region is known.
+
+The function does these things:
+
+- It forwards only the requests that its page makes. Any other path returns `404`.
+- It keeps successful responses in two caches. The first is Vercel's CDN, one cache per edge
+  region and hostname. The second is the Runtime Cache, which all regions and hostnames
+  share because the function always runs in one region. Tiles stay for a day. Errors such
+  as a `504` are not cached.
+- It merges concurrent misses that land on the same function instance into one request to
+  the tiles service.
+- It tags each tile `tiles` and `init-<YYYYMMDDHHMM>`. To clear a rerun init, run
+  `vercel cache invalidate --tag init-202611161800`. A redeploy also empties the CDN cache.
+
+The two copies differ in the paths they forward:
+
+| Copy | Forwards |
+| --- | --- |
+| `site/api/tiles.js` | tiles on branch `main`, and the `_meta` init list of this repo. It keeps the init list for 30 s. |
+| `presentation/api/tiles.js` | tiles on branch `main` or on a snapshot id. The booth page pins each run to its snapshot. |
+
+On a local `http:` origin, both pages fetch tiles from the tiles service directly. So does
+the booth's `server.py`.
 
 ## Running it
 
-The model needs a CUDA GPU. Install the GPU extra there (`uv sync --extra gpu`, with
-NATTEN's prebuilt wheels from <https://whl.natten.org/>; it also builds `earth2grid`) and
-run the [pipeline script](#pipeline-script).
+The model needs a CUDA GPU. On the GPU host, install the GPU extra with
+`uv sync --extra gpu`. It takes NATTEN's prebuilt wheels from <https://whl.natten.org/>
+and also builds `earth2grid`. Then run the [pipeline script](#pipeline-script).
 
-Credentials come from a local `.env` (see [`.env.example`](.env.example)):
+The pipeline reads its credentials from a local `.env` (see [`.env.example`](.env.example)):
 
-- `ARRAYLAKE_API_TOKEN` -- ingest target. GOES-19 data is public.
+- `ARRAYLAKE_API_TOKEN`: the ingest target. GOES-19 data is public.
 
-Each init is one commit, made after its last step, so stopping a run partway publishes
-nothing. Rerunning the same init overwrites its slice.
+The pipeline makes one commit per init, after the last step. A run that stops partway
+therefore publishes nothing. A rerun of the same init overwrites its slice.
 
 ### Docker
 
-On a cloud GPU instance (us-east-1, next to `noaa-goes19` and the Arraylake bucket),
-[`compose.yaml`](compose.yaml) runs the pipeline in a container built from
+Use [`compose.yaml`](compose.yaml) on a cloud GPU instance in us-east-1, next to
+`noaa-goes19` and the Arraylake bucket. It runs the pipeline in a container built from
 [`Dockerfile`](Dockerfile): the NGC PhysicsNeMo 26.08 image plus earth2studio 0.20.0,
-NATTEN and earth2grid. The container starts the script with no arguments, so it runs
-continuously, publishing each new init to Arraylake, and restarts unless stopped. The host
-needs the NVIDIA Container Toolkit, and pulling from `nvcr.io` may need an NGC login.
+NATTEN and earth2grid.
+
+The container starts the script with no arguments. The script then runs continuously and
+publishes each new init to Arraylake. Docker restarts the container unless you stop it. The
+host needs the NVIDIA Container Toolkit. A pull from `nvcr.io` can need an NGC login.
 
 ```bash
 mkdir -p secrets
@@ -100,15 +147,15 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
-`STORMSCOPE_PUBLISH_TARGET`, `ARRAYLAKE_REPO` and `STORMSCOPE_REGION` can be overridden
-from the shell or a `.env` next to `compose.yaml`. Arguments after the service name replace
-the default command, e.g. a single pinned run:
+To override `STORMSCOPE_PUBLISH_TARGET`, `ARRAYLAKE_REPO` or `STORMSCOPE_REGION`, set them
+in the shell or in a `.env` next to `compose.yaml`. Arguments after the service name
+replace the default command. For example, a single pinned run:
 
 ```bash
 docker compose run --rm pipeline python scripts/stormscope_us_pipeline.py --start-time 2026-11-16T18:00
 ```
 
-The model checkpoint and downloaded GOES files persist in the `cache` volume.
+The model checkpoint and the downloaded GOES files persist in the `cache` volume.
 
 ## Pipeline script
 
@@ -116,14 +163,19 @@ The model checkpoint and downloaded GOES files persist in the `cache` volume.
 GOES-19 ABI CONUS (noaa-goes19) → Earth2Studio StormScopeGOES Flash → Icechunk/Arraylake publish → tile dashboard
 ```
 
-It searches for the freshest complete input window by listing the bucket (`GOES.available`
-is not enough: it reports any hour with a file in it, and `fetch_data` would then silently
-serve the closest older scan), makes one commit per init, and uploads steps in the
-background while the next one is computed. It publishes through plain
-`earth2studio.io.IceChunkBackend` with `arraylake.Client.get_icechunk_storage` to the root
-group of `nvidia/sc26-chicago-stormscope_us-booth`. Each run extends the schema by its init
-time and appends along `time` in that same commit; every run must therefore use the same
-`--n-steps` and `--region`.
+The script lists the bucket to find the freshest complete input window. `GOES.available`
+is not enough for this. It reports any hour that has a file in it, and `fetch_data` then
+serves the closest older scan without a warning.
+
+The script uploads each step in the background while it computes the next one. It
+publishes through plain `earth2studio.io.IceChunkBackend`, with
+`arraylake.Client.get_icechunk_storage`, to the root group of
+`nvidia/sc26-chicago-stormscope_us-booth`.
+
+Each run makes one commit with the message `stormscope-us <init> lead 0-120 min`. The booth
+server finds each run's snapshot from this message, so keep the format. In that commit,
+the run extends the schema by its init time and appends along `time`. All runs must
+therefore use the same `--n-steps` and `--region`.
 
 ```bash
 uv run python scripts/stormscope_us_pipeline.py --n-steps 3                    # local Icechunk in outputs/
@@ -134,32 +186,43 @@ uv run python scripts/stormscope_us_pipeline.py --publish-target arraylake
 
 | Flag | Default | Notes |
 |---|---|---|
-| `--start-time` | freshest slot with all 6 input frames listed | ISO 8601 UTC on a 10-min boundary. If the bucket can't be listed, falls back to 30 min behind now. |
-| `--min-lag` | `0` | minutes a slot must be past its slot time to be considered |
-| `--wait-seconds` | `5` | sleep before looking again when there is no new init or a pass failed |
+| `--start-time` | freshest slot with all 6 input frames listed | ISO 8601 UTC on a 10-min boundary. If the script cannot list the bucket, it uses 30 min before now. |
+| `--min-lag` | `0` | minutes that must pass after a slot time before the script considers that slot |
+| `--wait-seconds` | `5` | sleep before the next look when there is no new init or a pass failed |
 | `--n-steps` | `12` | 10-min steps |
-| `--region` | `$STORMSCOPE_REGION` or full CONUS | `lat_min,lat_max,lon_min,lon_max` (west negative); Flash `set_domain` with 25 px context, stored cropped |
+| `--region` | `$STORMSCOPE_REGION` or full CONUS | `lat_min,lat_max,lon_min,lon_max`, west negative. Flash `set_domain` with 25 px context. The script stores the region cropped. |
 | `--output-dir` | `outputs` | local Icechunk store |
-| `--publish-target` | `$STORMSCOPE_PUBLISH_TARGET` or `local` | `local` \| `arraylake` |
+| `--publish-target` | `$STORMSCOPE_PUBLISH_TARGET` or `local` | `local` or `arraylake` |
 | `--arraylake-repo` | `$ARRAYLAKE_REPO` or `nvidia/sc26-chicago-stormscope_us-booth` | required with `arraylake`, which also needs `ARRAYLAKE_API_TOKEN` |
-| `--device` | `auto` | `auto` \| `cuda` \| `cpu` |
+| `--device` | `auto` | `auto`, `cuda` or `cpu` |
 
-It stores two RGB composites, not the 8 raw channels. Both are
-`(ensemble, time, lead_time, y, x, rgb)` uint8 in 0–255 on the HRRR Lambert conformal grid
-(1024 × 1792 at 3 km for CONUS; `x`/`y` in meters, CF grid mapping
-`hrrr_lambert_conformal`, 2-D `lat`/`lon`, each one chunk; `ensemble` is int8, numbered from 1). Each composite is computed in 0–1, then stored
-as `round(x * 255)` clipped to 1–255. Missing pixels (outside the GOES view or the region,
-or a step not written yet) are 0, the Zarr `fill_value`; there is no CF `_FillValue`.
+The script stores two RGB composites, not the 8 raw channels. Both have the shape
+`(ensemble, time, lead_time, y, x, rgb)` and are uint8 in 0–255 on the HRRR Lambert
+conformal grid:
+
+- 1024 × 1792 at 3 km for CONUS.
+- `x` and `y` in meters, with the CF grid mapping `hrrr_lambert_conformal`.
+- 2-D `lat` and `lon`, each one chunk.
+- `ensemble` is int8, numbered from 1.
+
+The script computes each composite in 0–1 and stores it as `round(x * 255)`, clipped to
+1–255. A missing pixel is 0, the Zarr `fill_value`. A pixel is missing when it is outside
+the GOES view or the region, or when its step is not written yet. There is no CF
+`_FillValue`.
 
 - `true_color`: CIMSS natural true color from ABI reflectances. ABI has no green band, so
-  green is synthesized:
+  the script synthesizes green:
   ```
   R = C02 (0.64 µm)    G = 0.45·C02 + 0.10·C03 (0.86 µm) + 0.45·C01    B = C01 (0.47 µm)
   ```
-  each clipped to 0–1 and put through EUMETSAT's true-color contrast curve, as in the Berlin
-  demo (reflectance·255 `[0, 30, 60, 120, 190, 255]` → `[0, 110, 160, 210, 240, 255]`,
-  linear in between). No Rayleigh or solar-zenith correction.
-- `water_vapor`: CIRA Simple Water Vapor RGB, day and night. Inverted brightness
-  temperatures, linear, gamma 1: R = C13 278.96→202.29 K (cloud height), G = C08 (6.19 µm)
-  242.67→214.66 K (upper-level moisture), B = C10 (7.34 µm) 261.03→245.12 K (low-to-mid
-  moisture). NOAA's Air Mass RGB would need C12 (9.6 µm), which StormScope-US does not predict.
+  The script clips each band to 0–1 and applies EUMETSAT's true-color contrast curve, as in
+  the Berlin demo. The curve maps reflectance·255 `[0, 30, 60, 120, 190, 255]` to
+  `[0, 110, 160, 210, 240, 255]`, linear in between. There is no Rayleigh or solar-zenith
+  correction.
+- `water_vapor`: CIRA Simple Water Vapor RGB, day and night. It uses inverted brightness
+  temperatures, linear, gamma 1:
+  - R = C13, 278.96 → 202.29 K: cloud height.
+  - G = C08 (6.19 µm), 242.67 → 214.66 K: upper-level moisture.
+  - B = C10 (7.34 µm), 261.03 → 245.12 K: low-to-mid moisture.
+
+  NOAA's Air Mass RGB needs C12 (9.6 µm), which StormScope-US does not predict.
