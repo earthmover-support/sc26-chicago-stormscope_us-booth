@@ -104,7 +104,7 @@ there first.
    browser can cache it. The server finds the snapshot of each run from its
    [commit message](../README.md#pipeline-script).
 3. **SQL.** Enable the service with `al compute enable nvidia sql --sku-code xs`. Its
-   hostname, `sql-4ae7e8fe159e81b6.compute.arraylake.app`, is `sql.host` in
+   hostname, `sql-***.compute.arraylake.app`, is `sql.host` in
    `config.json`. `ARRAYLAKE_SQL_HOST=...` in `.env` overrides it. An empty host shows SQL
    as disabled. The service scales to zero, so run one query before visitors arrive.
 

@@ -17,7 +17,7 @@ delete them when done.
 - [x] Cadence: a new forecast every 5 min (`run_interval_min: 5`).
 - [x] Booth copy on panels 03 and 05: "NVIDIA L40S GPU · ~4 s per 10-minute step", inference + ingest "<1 min".
 - [x] Arraylake tiles service enabled (`tiles-dd7cd36ec0562874.compute.arraylake.app`), URLs set in `presentation/config.json`, `presentation/api/tiles.js`, `site/index.html`, `site/api/tiles.js`. Real tiles served (2026-11-09).
-- [x] SQL service enabled; `sql.host` = `sql-4ae7e8fe159e81b6.compute.arraylake.app` (port 5432 reachable; first query with a token still to be tried).
+- [x] SQL service enabled; `sql.host` = `sql-***.compute.arraylake.app` (port 5432 reachable; first query with a token still to be tried).
 - [x] GitHub repo `earthmover-support/sc26-chicago-stormscope_us-booth` exists and matches the links on the booth page and viewer.
 - [x] Station marker: McCormick Place, Chicago (SC26 venue, 15–20 Nov 2026).
 - [x] SQL places in date order: SC26 Chicago, GTC DC (Ronald Reagan Building), AGU26 San Francisco (Moscone), AMS 2027 Denver (Colorado Convention Center), GTC San Jose (McEnery Convention Center).
