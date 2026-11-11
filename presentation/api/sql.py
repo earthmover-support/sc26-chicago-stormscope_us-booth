@@ -3,7 +3,10 @@
 Runs only the config.json query for one of `sql.places`, never free text or coordinates
 from the browser: the set of possible URLs stays small (places x inits of the last week),
 so the CDN keeps each answer for a day and a stranger cannot make the function run a new
-query per request.
+query per request. The CDN caches by exact URL, so a request that is not in the one
+canonical form (`?place=..&init=..`, the encoding `URLSearchParams` produces, nothing
+else) is redirected to it instead of run: a junk parameter or an odd percent-encoding
+costs one cheap redirect, not one SQL query.
 """
 
 import datetime as dt
@@ -11,7 +14,7 @@ import re
 import sys
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from booth import (  # noqa: E402
@@ -39,16 +42,25 @@ def check_init(init: str) -> str:
 
 class handler(BaseHTTPRequestHandler):  # noqa: N801 (name the Vercel runtime looks for)
     def do_GET(self):  # noqa: N802
-        args = {k: v[0] for k, v in parse_qs(urlsplit(self.path).query).items()}
+        raw = urlsplit(self.path).query
+        args = {k: v[0] for k, v in parse_qs(raw).items()}
         if not args:
             return send_json(self, {"status": "idle"})
         queries = place_queries()
         try:
             if args.get("place") not in queries:
                 raise ValueError(f"place must be one of {', '.join(queries)}")
-            query = fill_init(queries[args["place"]], check_init(args.get("init", "")))
+            init = check_init(args.get("init", ""))
         except ValueError as exc:
             return send_json(self, {"status": "error", "error": str(exc)}, 400)
+        canonical = urlencode({"place": args["place"], "init": init})
+        if raw != canonical:
+            self.send_response(308)
+            self.send_header("Location", f"/api/sql?{canonical}")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", "0")
+            return self.end_headers()
+        query = fill_init(queries[args["place"]], init)
         try:
             result = run_sql_once(query)
         except Exception as exc:
