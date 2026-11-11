@@ -88,8 +88,9 @@ height and moist and dry air. The booth page and the mobile viewer therefore sta
 
 ### Tile proxy
 
-The Vercel deployments do not send the browser to the tiles service directly. On any
-`https:` origin, the page requests `/tiles/...`, and `vercel.json` rewrites that path to
+The Vercel deployments do not send the browser to the tiles service directly. The site
+requests `/tiles/...` on any `https:` origin. The hosted presentation gets
+`tile_base: /tiles/<repo>` from `/api/config`. `vercel.json` rewrites `/tiles/*` to
 `api/tiles.js`. This function is the same in [`site/api/`](site/api/tiles.js) and
 [`presentation/api/`](presentation/api/tiles.js). It is a Node.js function pinned to
 `iad1`. Move it next to the tiles service's region once that region is known.

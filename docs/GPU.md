@@ -67,7 +67,7 @@ this order:
 2. A 6-type list: got `g7e.8xlarge` (failed later, see the timing log).
 3. The same 6-type list: every type full.
 4. The same list, first retry: got `g7e.8xlarge` again.
-5. The 10-type list below, first try: got `g6e.8xlarge`.
+5. A 10-type list, first try: got `g6e.8xlarge`.
 
 ## Run on Coiled
 
@@ -95,48 +95,39 @@ torch.compile warmup).
 | Stop | `uv run coiled cluster stop --workspace earthmover-devs stormscope-us-gpu` |
 | Logs | `uv run coiled logs --workspace earthmover-devs --cluster stormscope-us-gpu --label none` |
 
-### Step 1: get a GPU VM
+### Start the pipeline
 
-List `g6e.xlarge` first, then fallbacks. Coiled uses the next one if AWS has no
-capacity. If all are full, the command fails without starting a VM (no cost), so retry
-in a loop. The fallbacks below are the other L40S sizes (same speed, from cheapest), then
-faster and pricier GPUs:
+One command gets a GPU VM and runs the pipeline on it continuously. Without
+`--start-time`, the pipeline loops and runs each new init, so the command never exits and
+the VM needs no keepalive. `--env` sends the Arraylake token from `.env` to the VM. The
+token is not stored anywhere.
 
-```bash
-for n in $(seq 1 14); do
-  uv run coiled run --workspace earthmover-devs --name stormscope-us-gpu --region us-east-1 \
-    --ami-version DL --skip-ssd-mount \
-    --vm-type g6e.xlarge --vm-type g6e.2xlarge --vm-type g6e.4xlarge --vm-type g6e.8xlarge \
-    --vm-type g6e.16xlarge \
-    --vm-type g7e.2xlarge --vm-type g7e.4xlarge --vm-type g7e.8xlarge --vm-type p5.4xlarge \
-    --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
-    --docker-shm-size "1 GiB" --file scripts/ --detach \
-    -- bash scripts/coiled_bootstrap.sh --n-steps 3 --start-time <YYYY-MM-DDTHH:MM> --publish-target local \
-    > run.log 2>&1
-  grep -q "VM Type: *[a-z]" run.log && break  # got a VM
-  sleep 120
-done
-```
-
-The command in the loop is a 3-step test into a local store on the VM. It installs the
-dependencies and warms the compile cache. Set `--start-time` to a recent 10-minute slot.
-
-### Step 2: run continuously on that VM
-
-Use the instance type that step 1 got in `--vm-type`. The same `--name` reuses the running VM. `--env` sends the Arraylake token from `.env`
-to the VM; it is not stored anywhere. Without `--start-time` the pipeline loops and runs
-each new init:
+The command lists `g6e.xlarge` first, then fallbacks. Coiled uses the next type if AWS
+has no capacity for one. The fallbacks are the other L40S sizes (same speed, from
+cheapest), then faster and pricier GPUs. If all types are full, the command fails without
+starting a VM (no cost), so the loop tries again:
 
 ```bash
 (set -a; . ./.env; set +a
- uv run coiled run --workspace earthmover-devs --name stormscope-us-gpu --region us-east-1 \
-   --ami-version DL --skip-ssd-mount --vm-type g6e.xlarge --vm-type g6e.2xlarge \
-   --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
-   --docker-shm-size "1 GiB" --file scripts/ --detach \
-   --env ARRAYLAKE_API_TOKEN="$ARRAYLAKE_API_TOKEN" \
-   -- bash scripts/coiled_bootstrap.sh --n-steps 12 --publish-target arraylake \
-      --arraylake-repo nvidia/sc26-chicago-stormscope_us-booth)
+ for n in $(seq 1 14); do
+   uv run coiled run --workspace earthmover-devs --name stormscope-us-gpu --region us-east-1 \
+     --ami-version DL --skip-ssd-mount \
+     --vm-type g6e.xlarge --vm-type g6e.2xlarge --vm-type g6e.4xlarge --vm-type g6e.8xlarge \
+     --vm-type g6e.16xlarge \
+     --vm-type g7e.2xlarge --vm-type g7e.4xlarge --vm-type g7e.8xlarge --vm-type p5.4xlarge \
+     --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
+     --docker-shm-size "1 GiB" --file scripts/ --detach \
+     --env ARRAYLAKE_API_TOKEN="$ARRAYLAKE_API_TOKEN" \
+     -- bash scripts/coiled_bootstrap.sh --n-steps 12 --publish-target arraylake \
+        --arraylake-repo nvidia/sc26-chicago-stormscope_us-booth \
+     > run.log 2>&1
+   grep -q "VM Type: *[a-z]" run.log && break  # got a VM
+   sleep 120
+ done)
 ```
+
+The first forecast after a start is slower because it installs the dependencies and fills
+the compile cache. Check the logs (see the table above) until the first commit lands.
 
 The repo holds 12 lead steps, so every run must use `--n-steps 12`.
 
