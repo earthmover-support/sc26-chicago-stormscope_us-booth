@@ -130,34 +130,6 @@ The pipeline reads its credentials from a local `.env` (see [`.env.example`](.en
 The pipeline makes one commit per init, after the last step. A run that stops partway
 therefore publishes nothing. A rerun of the same init overwrites its slice.
 
-### Docker
-
-Use [`compose.yaml`](compose.yaml) on a cloud GPU instance in us-east-1, next to
-`noaa-goes19` and the Arraylake bucket. It runs the pipeline in a container built from
-[`Dockerfile`](Dockerfile): the NGC PhysicsNeMo 26.08 image plus earth2studio 0.20.0,
-NATTEN and earth2grid.
-
-The container starts the script with no arguments. The script then runs continuously and
-publishes each new init to Arraylake. Docker restarts the container unless you stop it. The
-host needs the NVIDIA Container Toolkit. A pull from `nvcr.io` can need an NGC login.
-
-```bash
-mkdir -p secrets
-printf %s "<token>" > secrets/arraylake_api_token
-docker compose up -d --build
-docker compose logs -f
-```
-
-To override `STORMSCOPE_PUBLISH_TARGET`, `ARRAYLAKE_REPO` or `STORMSCOPE_REGION`, set them
-in the shell or in a `.env` next to `compose.yaml`. Arguments after the service name
-replace the default command. For example, a single pinned run:
-
-```bash
-docker compose run --rm pipeline python scripts/stormscope_us_pipeline.py --start-time 2026-11-16T18:00
-```
-
-The model checkpoint and the downloaded GOES files persist in the `cache` volume.
-
 ## Pipeline script
 
 ```
