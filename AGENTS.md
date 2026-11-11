@@ -27,7 +27,6 @@ is kept besides its structure.
 ├── presentation/   # booth screen: web app (MapLibre globe, explainer panels, live SQL), its local server, and Vercel functions for the hosted copy
 ├── site/           # static MapLibre globe hosted on Vercel: init/variable selector, lead-time playback
 ├── docs/           # end-to-end latency, stage by stage, with every improvement measured
-├── docker/, Dockerfile, compose.yaml  # the pipeline as a container on a CUDA host
 ├── pyproject.toml  # uv project; `gpu` extra adds NATTEN + earth2grid for linux+CUDA
 └── README.md       # overview, viz/tiles setup, how to run the pipeline
 ```

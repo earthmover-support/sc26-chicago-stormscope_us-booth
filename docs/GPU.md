@@ -75,8 +75,8 @@ See [Coiled GPU clusters](https://docs.coiled.io/user_guide/clusters/gpu.html). 
 `earthmover-devs` workspace. Its default region is us-west-2, so always pass
 `--region us-east-1`.
 
-The Docker image is not in a registry. `scripts/coiled_bootstrap.sh` starts from the
-public NGC base image, repeats the Dockerfile's pip installs, and then runs the pipeline.
+`scripts/coiled_bootstrap.sh` starts from the public NGC PhysicsNeMo image, installs
+earth2studio, NATTEN and earth2grid, and then runs the pipeline.
 It skips the installs when they are already done on the VM.
 
 ### Default deployment: `g6e.xlarge`

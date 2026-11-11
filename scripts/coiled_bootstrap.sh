@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install the pipeline dependencies into the NGC PhysicsNeMo container on a Coiled GPU VM,
-# then run the pipeline with the given arguments. Mirrors the Dockerfile (keep in sync).
+# then run the pipeline with the given arguments.
 # See docs/GPU.md for the full `coiled run` command (--ami-version DL, no --keepalive).
 #
 # Each step prints a `[bootstrap]` marker, and a failure prints the line and exit code,
