@@ -29,7 +29,9 @@ env:
 jobs:
   pip-licenses:
     # Full-environment audit: installs the locked deps and fails if any
-    # transitive package has a non-allow-listed license.
+    # transitive package has a non-allow-listed license. The dev group is left
+    # out: coiled (Elastic-2.0, source-available) only launches our GPU VMs and
+    # ships in nothing, and its gilknocker wheel carries no license metadata.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -40,14 +42,14 @@ jobs:
           enable-cache: true
 
       - name: Sync locked dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --no-dev
 
       - name: Install pip-licenses
         run: uv pip install pip-licenses
 
       - name: Generate license report
         run: |
-          uv run pip-licenses \
+          uv run --frozen --no-dev pip-licenses \
             --format=markdown \
             --with-urls \
             --with-license-file \
@@ -75,12 +77,13 @@ jobs:
       # Other/Proprietary, and pip-licenses reads the classifier.
       - name: Enforce OSI allow-list
         run: |
-          uv run pip-licenses --partial-match \
+          uv run --frozen --no-dev pip-licenses --partial-match \
           --ignore-packages \
             google-crc32c \
             icechunk \
             cuda-toolkit \
             nvidia-cublas \
+            nvidia-cuda-cccl \
             nvidia-cuda-cupti \
             nvidia-cuda-nvrtc \
             nvidia-cuda-runtime \

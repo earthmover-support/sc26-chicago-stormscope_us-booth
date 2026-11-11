@@ -8,7 +8,8 @@
 <!-- The map waits for the style and its sprite before it adds a frame; fetch them during the MapLibre download. -->
 <link rel="preload" href="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json" as="fetch" crossorigin>
 <link rel="preconnect" href="https://tiles.basemaps.cartocdn.com" crossorigin>
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css">
+<!-- vendor/maplibre: MapLibre from npm, copied at build time (npm run build) so no CDN can change the script phones run -->
+<link rel="stylesheet" href="vendor/maplibre/maplibre-gl.css">
 <style>
   /* NVIDIA palette */
   :root {
@@ -91,7 +92,7 @@
 </div>
 <script type="module">
 // MapLibre 6 ships ES modules only.
-import * as maplibregl from "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
+import * as maplibregl from "./vendor/maplibre/maplibre-gl.mjs";
 
 // Arraylake tiles service, docs.earthmover.io/compute/tiles#maplibremapbox
 const TILES = "https://tiles-dd7cd36ec0562874.compute.arraylake.app/v1/services/tiles/nvidia";

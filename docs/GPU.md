@@ -147,9 +147,8 @@ running command.
 Without a keepalive, Coiled stops the VM 10 ms after the command exits, and that GPU
 can be gone on the next launch. On a `g7e.8xlarge`, a `--detach` run with no keepalive
 also stopped twice during the bootstrap's first `pip install`. This did not happen with a
-keepalive. `scripts/coiled_gpu_benchmark.sh` therefore uses `--keepalive 30m` and stops
-each cluster itself when the run is done. A later `coiled run` with the same `--name`
-reuses the running VM. Stop it with
+keepalive. So launch with `--keepalive 30m` and stop the cluster by hand when the run is
+done. A later `coiled run` with the same `--name` reuses the running VM. Stop it with
 `uv run coiled cluster stop --workspace earthmover-devs <name>`.
 
 **Pass `--skip-ssd-mount`** on instances with a local NVMe SSD (`g6e`, `g6`, `g5`). On
@@ -179,9 +178,9 @@ member.
 | g6e.8xlarge | L40S 48 GB | 3 | 7.0 | 18.4 | 3.9 | 0.0 | OK, local store; total 33.6 s |
 | g6e.8xlarge | L40S 48 GB | 12 | 6.8 | 9.2 | 3.7 (3.3 from step 4) | 0.7 | OK, Arraylake `nvidia/sc26-chicago-stormscope_us-booth`; total 55.7 s; same VM as the row above, so the compile cache was warm |
 | g6e.8xlarge | L40S 48 GB | 12 | 3.3–6.4 | - | 3.4–4.0 (rollout+write 40.4–48.0 s / 12) | 0.5–0.7 | OK, continuous, 4 inits 5 min apart; total 44.3–54.9 s; published ~6 min after slot time |
-| g6e.4xlarge | L40S 48 GB | 12 | 3.7 | - | 3.3 (rollout+write 40.0 s / 12) | 0.6 | OK, benchmark, 4 live inits, mean of the last 3: total 44.2 s (first, cold compile cache: 62.2 s); $3.00/h, $0.037 per forecast; same speed as g6e.8xlarge (45.0 s) at 66% of the price |
+| g6e.4xlarge | L40S 48 GB | 12 | 3.7 | - | 3.3 (rollout+write 40.0 s / 12) | 0.6 | OK, 4 live inits, mean of the last 3: total 44.2 s (first, cold compile cache: 62.2 s); $3.00/h, $0.037 per forecast; same speed as g6e.8xlarge (45.0 s) at 66% of the price |
 | `g6e.2xlarge` | L40S 48 GB | 12 | | | | | TODO: same GPU, 8 vCPU / 64 GB RAM, $2.24/h, cheaper than g6e.4xlarge ($3.00/h) |
-| g6e.xlarge | L40S 48 GB | 12 | 4.5 | - | 3.4 (rollout+write 40.5 s / 12) | 0.6 | OK, benchmark, 4 live inits, mean of the last 3: total 45.5 s (first, cold compile cache: 83.5 s; 4 vCPU slow the warmup); $1.86/h, $0.024 per forecast; same steady-state speed as g6e.4xlarge/8xlarge at 62% / 41% of their price |
+| g6e.xlarge | L40S 48 GB | 12 | 4.5 | - | 3.4 (rollout+write 40.5 s / 12) | 0.6 | OK, 4 live inits, mean of the last 3: total 45.5 s (first, cold compile cache: 83.5 s; 4 vCPU slow the warmup); $1.86/h, $0.024 per forecast; same steady-state speed as g6e.4xlarge/8xlarge at 62% / 41% of their price |
 | `g6.xlarge` | L4 24 GB | 12 | | | | | TODO: $0.80/h (−82%); estimated 2–2.5 min per forecast |
 | `g5.xlarge` | A10G 24 GB | 12 | | | | | TODO: $1.01/h (−78%); estimated 2–3 min per forecast |
 

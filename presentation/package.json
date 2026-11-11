@@ -4,9 +4,9 @@
   "type": "module",
   "description": "Vendored front-end libraries for the booth page (served offline by server.py, copied into web/vendor on Vercel)",
   "dependencies": {
+    "@vercel/functions": "3.11.1",
     "maplibre-gl": "6.11.2",
-    "qrcode-generator": "2.0.4",
-    "@vercel/functions": "3.9.9"
+    "qrcode-generator": "2.0.4"
   },
   "scripts": {
     "vendor": "rm -rf web/vendor && mkdir -p web/vendor && cp -R node_modules/maplibre-gl/dist web/vendor/maplibre && cp -R node_modules/qrcode-generator/dist web/vendor/qrcode"

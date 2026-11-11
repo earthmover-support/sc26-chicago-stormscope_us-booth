@@ -287,7 +287,7 @@
   // The venue: ?location=<sql.places name> for this screen, else config.json location.
   function venue() {
     const asked = new URLSearchParams(location.search).get("location");
-    const name = asked in S.cfg.places ? asked : S.cfg.location;
+    const name = asked && Object.hasOwn(S.cfg.places, asked) ? asked : S.cfg.location;
     const [lat, lon] = S.cfg.places[name];
     return { name, lat, lon };
   }
@@ -893,8 +893,12 @@
 
   // server-filled query per city chip, {init} left in; the one for "here" is the default
   const sqlFor = (name) => S.cfg.sql_places[name];
-  const defaultSql = () => (S.here.name ? sqlFor(S.here.name) : sqlForCoords(S.here.lat, S.here.lon));
   const MY = "My location";
+  // Coordinate queries exist only on the booth (sql_editable): the hosted server runs the
+  // venue queries alone, so a geolocated "here" falls back to the venue there.
+  const myLocationAllowed = () => !!S.cfg.sql_editable;
+  const defaultSql = () =>
+    S.here.name ? sqlFor(S.here.name) : myLocationAllowed() ? sqlForCoords(S.here.lat, S.here.lon) : sqlFor(venue().name);
 
   // coords embedded in a built query, e.g. `lat BETWEEN 52.5000 - 0.05 AND ...`
   const coordsOf = (query) => {
@@ -939,7 +943,7 @@
 
   function renderSqlPlaces() {
     const places = $("#sqlPlaces");
-    const names = [...Object.keys(S.cfg.sql_places), MY];
+    const names = [...Object.keys(S.cfg.sql_places), ...(myLocationAllowed() ? [MY] : [])];
     // built once: rebuilding on every poll swallowed clicks; a click while a query runs
     // replaces it (newest wins)
     if (places.children.length !== names.length) {
@@ -957,15 +961,17 @@
         });
         return b;
       }));
-      places.lastChild.title = "Use browser geolocation";
+      if (myLocationAllowed()) places.lastChild.title = "Use browser geolocation";
     }
     names.forEach((name, k) => {
       const b = places.children[k];
       b.classList.toggle("on", name === S.sqlPlace);
       b.setAttribute("aria-pressed", String(name === S.sqlPlace));
     });
-    places.lastChild.textContent = S.locating ? "Locating…" : `📍 ${MY}`;
-    places.lastChild.disabled = !!S.locating;
+    if (myLocationAllowed()) {
+      places.lastChild.textContent = S.locating ? "Locating…" : `📍 ${MY}`;
+      places.lastChild.disabled = !!S.locating;
+    }
     $("#sqlFoot").textContent =
       S.sqlPlace === MY && S.myCoords
         ? `How cloudy over ${MY} (${fmtCoords(S.myCoords.lat, S.myCoords.lon)}), next 2 h · PostgreSQL wire protocol`
@@ -1011,7 +1017,7 @@
         const query = sqlForCoords(lat, lon);
         sqlBox().value = query;
         renderSqlPlaces();
-        runSql(query); // booth POSTs the query; hosted GETs lat/lon (see runPlaceSql)
+        runSql(query); // booth only: POSTs the query to server.py
       },
       (err) => {
         const hint = " – pick one of the event venues.";
@@ -1053,18 +1059,12 @@
     pollSqlFast();
   }
 
-  // hosted page: the server runs only a city chip's query (or a coordinate inside
-  // data_bounds for My location), for the newest init
+  // hosted page: the server runs only a city chip's query, for the newest init
   let placeAbort = null;
   async function runPlaceSql() {
     const run = latestShown();
     if (!run) return;
-    const params =
-      S.sqlPlace === MY && S.myCoords
-        ? { lat: String(S.myCoords.lat), lon: String(S.myCoords.lon), init: run.time }
-        : S.sqlPlace
-          ? { place: S.sqlPlace, init: run.time }
-          : null;
+    const params = S.sqlPlace && S.sqlPlace !== MY ? { place: S.sqlPlace, init: run.time } : null;
     if (!params) return;
     placeAbort?.abort(); // a newer pick replaces the query still running
     const ctl = (placeAbort = new AbortController());
@@ -1143,7 +1143,7 @@
 
   // the default query in the box; the booth server runs it if it still runs another place's
   function useDefaultSql() {
-    S.myCoords = S.here.name ? null : { lat: S.here.lat, lon: S.here.lon };
+    S.myCoords = S.here.name || !myLocationAllowed() ? null : { lat: S.here.lat, lon: S.here.lon };
     sqlBox().value = defaultSql();
     S.sqlPlace = placeOf(defaultSql());
     renderSqlPlaces();

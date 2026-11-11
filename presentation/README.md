@@ -76,7 +76,8 @@ The page takes "here" from the first of these that applies:
 
 1. The browser's location, if the browser already has location permission and the location
    is inside `data_bounds`. The page never asks for permission. The marker then reads only
-   "you are here".
+   "you are here". On the hosted page the SQL default stays on the venue: its server
+   runs only the venue queries, never a query for a coordinate.
 2. `?location=<name>` in the page URL, for example `?location=GTC%20DC`. Use it to run one
    screen at another venue without a config edit. The camera shifts so that the venue
    stays on screen. The root README [lists the link for each venue](../README.md#links).
@@ -170,7 +171,7 @@ ways:
   `tile_base: /tiles/<repo>`.
 - **Small windows.** A window smaller than 1920 × 1080 shows the booth layout zoomed down to
   fit.
-- **Vendored libraries.** The build copies them into `web/vendor/` (`npm run vendor`).
+- **Vendored libraries.** The build copies them into `web/vendor/` (`npm run vendor`); the phone site in `site/` does the same.
 
 Vercel project settings: root directory `presentation`, framework preset "Other". The
 install command, build command and output directory come from `vercel.json`. Environment
