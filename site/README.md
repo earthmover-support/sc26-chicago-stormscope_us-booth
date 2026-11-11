@@ -4,8 +4,8 @@ A static MapLibre globe of the latest StormScope-US nowcasts over the contiguous
 come from the public Arraylake tiles service of the `nvidia` org, branch `main`; on
 Vercel through a caching proxy. The page has an init selector, a true color / water vapor
 toggle, and playback over lead times. It starts on water vapor while it is dark at the SC26
-venue. Playback holds the first frame until all leads have loaded. Every minute it checks
-for a new init, loads it in the background, and switches to it once it is complete. No
+venue. Playback holds the first frame until all leads have loaded; each loop then holds +0
+for 2 s and the last lead for 0.8 + 2 s. Every minute it checks for a new init, loads it in the background, and switches to it once it is complete. No
 build step and no server: `index.html`, `sw.js`, three logo SVGs and one Vercel function.
 
 The tiles service URL is `TILES` in `index.html` and `api/tiles.js`.

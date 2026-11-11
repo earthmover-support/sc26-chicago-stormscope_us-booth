@@ -104,6 +104,8 @@ const REF = "main";
 const COLORSCALERANGE = "0,255";
 const BOUNDS = [-133.712, 21.582, -61.337, 52.145]; // lat/lon extent of the model grid
 const FRAME_MS = 800;
+const HOLD_FIRST_MS = 2000; // +0 (observed) stays this long in total
+const HOLD_LAST_MS = 2000; // the last lead stays this much longer than FRAME_MS
 const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
 const LEADS_IN_FLIGHT = 3; // frames loading at once; one at a time waits on each frame's slowest tile
 const POLL_MS = 60000; // how often to look for a new init
@@ -332,9 +334,21 @@ function setCollapsed(on) {
 $("collapse").onclick = () => setCollapsed(!$("panel").classList.contains("collapsed"));
 setCollapsed(matchMedia("(max-width: 600px)").matches); // phones start collapsed
 
+// How long the frame on screen stays before the next step.
+function frameMs() {
+  if (frame === 0) return HOLD_FIRST_MS;
+  const last = ![...(run?.loaded ?? [])].some((k) => k > frame);
+  return FRAME_MS + (last ? HOLD_LAST_MS : 0);
+}
+
+function play() {
+  step();
+  timer = setTimeout(play, frameMs());
+}
+
 function setPlaying(on) {
-  clearInterval(timer);
-  timer = on ? setInterval(step, FRAME_MS) : null;
+  clearTimeout(timer);
+  timer = on ? setTimeout(play, frameMs()) : null;
   $("play").textContent = on ? "❚❚" : "▶";
 }
 

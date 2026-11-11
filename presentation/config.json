@@ -22,6 +22,7 @@
 
   "panel_seconds": 25,
   "playback_speed": "medium",
+  "hold_first_ms": 2000,
   "hold_ms": 2000,
   "attract_reset_s": 180,
   "timezone": "America/Chicago",

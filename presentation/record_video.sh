@@ -12,7 +12,7 @@
 #   SCREEN    avfoundation device name or index, see: ffmpeg -f avfoundation -list_devices true -i ""
 #   WINDOW_X  left edge of that monitor in points (Chrome opens fullscreen there)
 #   LOOP_S    seconds per forecast playback loop (+0 -> +120min); empty = auto from
-#             config.json (leads * speed + hold_ms). Override if you change playback speed live.
+#             config.json (hold_first_ms + other leads * speed + hold_ms). Override if you change playback speed live.
 #   FIRST_VAR variable shown first; alternates with water_vapor after every playback loop.
 #             Needs Accessibility permission for the terminal app the first time osascript
 #             sends keystrokes (System Settings > Privacy & Security > Accessibility).
@@ -27,10 +27,10 @@ CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 TMP="$(mktemp -d)"
 RAW="$TMP/raw.mp4"
 
-# seconds for one +0 -> +120min playback loop at the configured speed + end hold;
-# app.js SPEEDS: slow 0.75 / normal 0.5 / fast 0.25 s per frame
+# seconds for one +0 -> +120min playback loop: +0 hold, the other leads at the configured
+# speed, end hold; app.js SPEEDS: slow 1 / medium 0.5 / fast 0.25 s per frame
 if [[ -z "$LOOP_S" ]]; then
-  LOOP_S="$(HERE="$HERE" python3 -c 'import json, os; c=json.load(open(os.path.join(os.environ["HERE"], "config.json"))); n=c["lead_steps"]+1; sp={"slow":1,"medium":0.5,"fast":0.25}[c.get("playback_speed","medium")]; print("%.1f" % (n*sp + c.get("hold_ms",2500)/1000))')"
+  LOOP_S="$(HERE="$HERE" python3 -c 'import json, os; c=json.load(open(os.path.join(os.environ["HERE"], "config.json"))); n=c["lead_steps"]+1; sp={"slow":1,"medium":0.5,"fast":0.25}[c.get("playback_speed","medium")]; print("%.1f" % ((n-1)*sp + (c["hold_first_ms"] + c["hold_ms"])/1000))')"
 fi
 case "$FIRST_VAR" in true_color) SECOND_VAR="water_vapor" ;; water_vapor) SECOND_VAR="true_color" ;; *)
   echo "FIRST_VAR must be true_color or water_vapor" >&2; exit 1 ;; esac

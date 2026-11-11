@@ -354,8 +354,10 @@
   function scheduleAnim() {
     clearTimeout(animTimer);
     if (S.animPaused) return;
+    // +0 (observed) holds hold_first_ms in total; the last lead holds hold_ms on top of its step
     const last = shown && readyFrames(shown).find((k) => k > S.frame) == null;
-    animTimer = setTimeout(animate, SPEEDS[S.speed] * 1000 + (last ? S.cfg.hold_ms : 0));
+    const wait = S.frame === 0 ? S.cfg.hold_first_ms : SPEEDS[S.speed] * 1000 + (last ? S.cfg.hold_ms : 0);
+    animTimer = setTimeout(animate, wait);
   }
 
   // Holds the first frame until every lead has loaded (or timed out), then loops over the

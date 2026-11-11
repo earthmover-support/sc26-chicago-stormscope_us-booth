@@ -215,6 +215,7 @@ def public_config(sql_editable: bool) -> dict:
         "max_runs",
         "panel_seconds",
         "playback_speed",
+        "hold_first_ms",
         "hold_ms",
         "attract_reset_s",
         "timezone",
