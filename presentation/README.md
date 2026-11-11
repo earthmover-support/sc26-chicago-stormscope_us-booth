@@ -60,7 +60,7 @@ and on `water_vapor` while it is dark.
 - the browser's location, if the browser already has location permission (the page never
   asks) and it lies inside `data_bounds` (the marker then reads just "you are here");
 - else `?location=<name>` in the page URL, e.g. `?location=GTC%20DC`, to run one screen at
-  another venue without editing config;
+  another venue without editing config (the camera shifts so the venue stays on screen);
 - else `location` in `config.json` (`"SC26 Chicago"`). Both name an entry in `sql.places`,
   the venue chips on slide 8; add a venue there first.
 

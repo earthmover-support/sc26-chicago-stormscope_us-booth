@@ -145,10 +145,12 @@
 
   // Smallest zoom at which the whole panel, swayed and pitched, stays inside
   // camera.cover [west, south, east, north]: the part of CONUS the forecast always fills.
+  // Web Mercator x/y in 0..1
+  const mx = (lon) => (lon + 180) / 360;
+  const my = (lat) => (1 - Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)) / Math.PI) / 2;
+
   function coverZoom(cam, box) {
     if (!cam.cover) return cam.zoom;
-    const mx = (lon) => (lon + 180) / 360;
-    const my = (lat) => (1 - Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)) / Math.PI) / 2;
     const [w, s, e, n] = cam.cover;
     const cx = mx(cam.lon), cy = my(cam.lat);
     const rot = (cam.sway_deg * Math.PI) / 180;
@@ -215,16 +217,28 @@
     // Camera: always looking at CONUS, gentle sway of the bearing around a fixed centre.
     // Visitors can zoom (out to camera.min_zoom) and pan; after camera.idle_reset_s without input it eases home.
     const cam = c.camera;
-    const center = [cam.lon, cam.lat];
+    let center = [cam.lon, cam.lat];
     let home = cam.zoom;
+    // camera.lon/lat, shifted just enough that "here" and its label (to the right) stay on screen
+    const homeCenter = () => {
+      const box = map.getContainer(), scale = 512 * 2 ** home;
+      const W = box.clientWidth / 2, H = box.clientHeight / 2;
+      const dx = (mx(S.here.lon) - mx(cam.lon)) * scale, dy = (my(S.here.lat) - my(cam.lat)) * scale;
+      const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+      const sx = dx - clamp(dx, -W + 80, W - 260), sy = dy - clamp(dy, -H + 80, H - 80);
+      return new maplibregl.MercatorCoordinate(mx(cam.lon) + sx / scale, my(cam.lat) + sy / scale).toLngLat().toArray();
+    };
+    const atHome = () => Math.abs(map.getZoom() - home) < 0.01; // a visitor's pan/zoom survives a resize
     const fitZoom = () => {
-      const atHome = Math.abs(map.getZoom() - home) < 0.01; // a visitor's pan/zoom survives a resize
+      const was = atHome();
       home = Math.max(cam.zoom, coverZoom(cam, map.getContainer()));
+      center = homeCenter();
       map.setMinZoom(Math.min(cam.min_zoom ?? home, home)); // visitors may zoom out to camera.min_zoom
-      if (atHome) map.jumpTo({ center, zoom: home });
+      if (was) map.jumpTo({ center, zoom: home });
     };
     fitZoom();
     map.on("resize", fitZoom);
+    recenter = () => { center = homeCenter(); if (atHome()) map.easeTo({ center, duration: 1500 }); };
 
     let idle;
     const touched = () => {
@@ -263,6 +277,7 @@
   }
 
   let hereMarker = null;
+  let recenter = () => {}; // set by initGlobe: moves the camera home so "here" is on screen
   function renderHere() {
     if (!hereMarker) return;
     hereMarker.getElement().querySelector("span").textContent = S.here.name ? `${S.here.name}\nyou are here` : "you are here";
@@ -290,6 +305,7 @@
       const wasVariable = defaultVariable(), onVenueSql = !S.sqlDirty && S.sqlPlace === S.here.name;
       S.here = { name: null, lat, lon };
       renderHere();
+      recenter();
       if (S.variable === wasVariable && S.variable !== defaultVariable()) setVariable(defaultVariable());
       if (onVenueSql) useDefaultSql();
     } catch {
