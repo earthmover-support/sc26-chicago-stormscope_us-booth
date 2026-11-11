@@ -1,57 +1,54 @@
 # site
 
-A static MapLibre globe of the latest StormScope-US nowcasts over the contiguous US. Tiles
-come from the public Arraylake tiles service of the `nvidia` org, branch `main`; on
-Vercel through a caching proxy. The page has an init selector, a true color / water vapor
-toggle, and playback over lead times. It starts on water vapor while it is dark at the SC26
-venue. Playback holds the first frame until all leads have loaded; each loop then holds +0
-for 2 s and the last lead for 0.8 + 2 s. Every minute it checks for a new init, loads it in the background, and switches to it once it is complete. No
-build step and no server: `index.html`, `sw.js`, three logo SVGs and one Vercel function.
+A static MapLibre globe of the latest StormScope-US nowcasts over the contiguous US, for
+phones. The tiles come from branch `main` of the
+[Arraylake tiles service](../README.md#tiles-service). On Vercel, they go through the
+[tile proxy](../README.md#tile-proxy).
 
-The tiles service URL is `TILES` in `index.html` and `api/tiles.js`.
+The page has these controls and behaviours:
 
-## Tile cache
+- An init selector.
+- A true color / water vapor toggle. The page starts on water vapor while it is dark at
+  the SC26 venue (see [Render parameters](../README.md#render-parameters) for why).
+- Playback over lead times. Playback holds the first frame until all leads have loaded.
+  Each loop then holds +0 for 2 s and holds the last lead for 0.8 + 2 s.
+- A check for a new init every minute. The page loads a new init in the background and
+  switches to it when it is complete.
 
-The tiles service sends branch tiles with `max-age=0`, so the browser would ask the service
-again for every tile it has already seen. `sw.js` is a service worker that answers tile
-requests from the browser's Cache API instead, and only goes to the service on a miss.
-This is safe because the pipeline publishes each init in a single commit: once an init is
-listed, its tiles never change. Only successful responses are stored, and only the newest
-12 inits are kept.
+There is no build step and no server. The folder holds `index.html`, `sw.js`, three logo
+SVGs and one Vercel function, `api/tiles.js`.
 
-Change `CACHE` in `sw.js` (`tiles-v1` → `tiles-v2`) and redeploy if tiles change under the
-same URL: an init that was rerun, a reset branch, or a tiles service upgrade that renders
-differently. To clear it in one browser: DevTools → Application → Storage → Clear site data.
+## Tile cache in the browser
 
-The tiles service keeps no cache of rendered tiles, so every visitor's browser would make it render the
-same tiles of a run again. On Vercel (any `https:` origin) the page asks for `/tiles/...`
-instead, which `vercel.json` rewrites to `api/tiles.js`. That function (Node.js, pinned to
-`iad1`; move it next to the tiles service's region once known):
+The tiles service sends branch tiles with `max-age=0`. Without help, the browser would ask
+the service again for every tile it already has. `sw.js` is a service worker that answers
+tile requests from the browser's Cache API. It goes to the service only on a miss.
 
-- forwards only the page's two kinds of request (tiles and the `_meta` tree of this repo);
-- keeps successful responses in two caches: Vercel's CDN (per edge region and hostname) and
-  the Runtime Cache, which every region and hostname share because the function always runs
-  in one region. Tiles a day, the `_meta` init list 30 s. Errors such as a `504` are not cached;
-- merges concurrent misses that land on the same function instance into one tiles-service request;
-- tags tiles `tiles` and `init-<YYYYMMDDHHMM>`, so a rerun init can be cleared with
-  `vercel cache invalidate --tag init-202611161800`. A redeploy empties the CDN cache too.
+This is safe because the pipeline publishes each init in a single commit. After an init is
+listed, its tiles never change. The service worker stores only successful responses and
+keeps only the newest 12 inits.
 
-Locally (`http:`) the page goes straight to the tiles service.
+If tiles change under the same URL, change `CACHE` in `sw.js` (`tiles-v1` to `tiles-v2`)
+and redeploy. Tiles change under the same URL after a rerun init, a reset branch, or a
+tiles service upgrade that renders differently. To clear the cache in one browser, open
+DevTools, then Application, then Storage, and click Clear site data.
+
+The server-side cache that all visitors share is the [tile proxy](../README.md#tile-proxy).
 
 ## Run locally
 
-Serve the folder over HTTP from the repo root:
+From the repo root, serve the folder over HTTP:
 
 ```bash
 uv run --no-project python -m http.server 8765 --directory site
 ```
 
 Then open http://localhost:8765. The tiles service must be up and public (see
-[Viz](../README.md#viz) in the top-level README).
+[Tiles service](../README.md#tiles-service)).
 
 ## Hosting
 
-Hosted on Vercel, deployed from `main` with root directory `site`, framework preset "Other"
-and no build command. `vercel.json` sets an ignored build step, so Vercel skips deploying
-commits that change nothing under `site/`. The tiles service sends
-`Access-Control-Allow-Origin: *`, so the page works from any domain.
+Vercel deploys the site from `main` with root directory `site`, framework preset "Other"
+and no build command. `vercel.json` sets an ignored build step, so Vercel skips commits that
+change nothing under `site/`. The tiles service sends `Access-Control-Allow-Origin: *`, so
+the page works from any domain.

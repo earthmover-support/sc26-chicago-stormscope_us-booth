@@ -29,7 +29,6 @@ is kept besides its structure.
 ├── docs/           # end-to-end latency, stage by stage, with every improvement measured
 ├── docker/, Dockerfile, compose.yaml  # the pipeline as a container on a CUDA host
 ├── pyproject.toml  # uv project; `gpu` extra adds NATTEN + earth2grid for linux+CUDA
-├── TODO.md         # what the user still has to fix or decide
 └── README.md       # overview, viz/tiles setup, how to run the pipeline
 ```
 
@@ -40,5 +39,4 @@ is kept besides its structure.
 ## Conventions
 
 - `uvx pre-commit run --all-files` for ruff.
-- Keep `TODO.md` current whenever a placeholder, assumption or blocker needs the user.
 - Placeholders (`TODO-<name>`) mark infra that does not exist yet; none are left.
