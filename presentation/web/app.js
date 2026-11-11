@@ -44,6 +44,7 @@
     sql: null,
     sqlPlace: null, // city chip (or My location) that produced the query, null once hand-edited
     sqlDirty: false, // textarea edited but not run yet
+    here: null, // {name, lat, lon}: the venue, or the browser's location (name null)
     myCoords: null, // {lat, lon} from geolocation once inside data_bounds
     locating: false, // geolocation lookup in flight
     doneInit: null,
@@ -99,8 +100,8 @@
     const H = (280.46061837 + 360.98564736629 * d + lon) * r - ra; // local hour angle
     return Math.sin(lat * r) * Math.sin(dec) + Math.cos(lat * r) * Math.cos(dec) * Math.cos(H) > 0;
   }
-  // True Color is black at night, so the page starts (and resets) on Water Vapor while the venue is dark
-  const defaultVariable = () => (sunUp(S.cfg.station.lat, S.cfg.station.lon) ? "true_color" : "water_vapor");
+  // True Color is black at night, so the page starts (and resets) on Water Vapor while it is dark here
+  const defaultVariable = () => (sunUp(S.here.lat, S.here.lon) ? "true_color" : "water_vapor");
   const selectableRuns = () => S.runs.slice(0, S.cfg.max_runs);
   // "Latest" = newest init; the pipeline commits each init whole, so every run has all leads
   const latestShown = () => selectableRuns()[0] || null;
@@ -253,11 +254,47 @@
     };
     requestAnimationFrame(sway);
 
-    // Station marker
-    const st = c.station;
+    // "you are here" marker; moved by locate()
     const m = el("div", "station");
-    m.append(el("i"), el("span", null, `${st.name}\nyou are here`));
-    new maplibregl.Marker({ element: m, anchor: "left", offset: [-11, 0] }).setLngLat([st.lon, st.lat]).addTo(map);
+    m.append(el("i"), el("span"));
+    hereMarker = new maplibregl.Marker({ element: m, anchor: "left", offset: [-11, 0] }).setLngLat([S.here.lon, S.here.lat]);
+    renderHere();
+    hereMarker.addTo(map);
+  }
+
+  let hereMarker = null;
+  function renderHere() {
+    if (!hereMarker) return;
+    hereMarker.getElement().querySelector("span").textContent = S.here.name ? `${S.here.name}\nyou are here` : "you are here";
+    hereMarker.setLngLat([S.here.lon, S.here.lat]);
+  }
+
+  // The venue: ?station=<sql.places name> for this screen, else config.json station.
+  function venue() {
+    const asked = new URLSearchParams(location.search).get("station");
+    const name = asked in S.cfg.places ? asked : S.cfg.station;
+    const [lat, lon] = S.cfg.places[name];
+    return { name, lat, lon };
+  }
+
+  // Moves "here" from the venue to the browser's location, only if the browser already
+  // allows it: never prompts. Inside the data domain, the marker, the day/night default and
+  // the SQL default follow; whatever a visitor already changed stays.
+  async function locate() {
+    try {
+      if ((await navigator.permissions.query({ name: "geolocation" })).state !== "granted") return;
+      const pos = await new Promise((ok, fail) =>
+        navigator.geolocation.getCurrentPosition(ok, fail, { timeout: 10000, maximumAge: 600000 }));
+      const lat = +pos.coords.latitude.toFixed(4), lon = +pos.coords.longitude.toFixed(4);
+      if (!inBounds(lat, lon)) return;
+      const wasVariable = defaultVariable(), onVenueSql = !S.sqlDirty && S.sqlPlace === S.here.name;
+      S.here = { name: null, lat, lon };
+      renderHere();
+      if (S.variable === wasVariable && S.variable !== defaultVariable()) setVariable(defaultVariable());
+      if (onVenueSql) useDefaultSql();
+    } catch {
+      // no Permissions API or no fix: stay on the venue
+    }
   }
 
   function dropSet(set) {
@@ -838,9 +875,9 @@
     showPanel(S.panel);
   };
 
-  // server-filled query per city chip, {init} left in; the first one is the default
+  // server-filled query per city chip, {init} left in; the one for "here" is the default
   const sqlFor = (name) => S.cfg.sql_places[name];
-  const defaultSql = () => Object.values(S.cfg.sql_places)[0];
+  const defaultSql = () => (S.here.name ? sqlFor(S.here.name) : sqlForCoords(S.here.lat, S.here.lon));
   const MY = "My location";
 
   // coords embedded in a built query, e.g. `lat BETWEEN 52.5000 - 0.05 AND ...`
@@ -855,7 +892,7 @@
   const sqlForCoords = (lat, lon) => {
     const box = S.cfg.sql_box ?? 0.05;
     const rLat = lat.toFixed(4), rLon = lon.toFixed(4);
-    return defaultSql()
+    return Object.values(S.cfg.sql_places)[0]
       .replace(/lat BETWEEN\s+[^\s]+\s*-\s*[^\s]+\s+AND\s+[^\s]+\s*\+\s*[^\s]+/i, `lat BETWEEN ${rLat} - ${box} AND ${rLat} + ${box}`)
       .replace(/lon BETWEEN\s+[^\s]+\s*-\s*[^\s]+\s+AND\s+[^\s]+\s*\+\s*[^\s]+/i, `lon BETWEEN ${rLon} - ${box} AND ${rLon} + ${box}`);
   };
@@ -1088,11 +1125,18 @@
     }
   }
 
+  // the default query in the box; the booth server runs it if it still runs another place's
+  function useDefaultSql() {
+    S.myCoords = S.here.name ? null : { lat: S.here.lat, lon: S.here.lon };
+    sqlBox().value = defaultSql();
+    S.sqlPlace = placeOf(defaultSql());
+    renderSqlPlaces();
+    if (S.cfg.sql_editable && defaultSql() !== sqlFor(S.cfg.station)) runSql(defaultSql());
+  }
+
   function initSqlEditor() {
     const box = sqlBox();
-    S.sqlPlace = placeOf(defaultSql());
-    box.value = defaultSql();
-    renderSqlPlaces();
+    useDefaultSql();
     if (!S.cfg.sql_editable) {
       box.readOnly = true; // hosted page: the chips pick the query, nobody types one
       $("#sqlReset").hidden = true;
@@ -1109,8 +1153,8 @@
       else if (e.key === "Escape") box.blur();
     });
     $("#sqlReset").addEventListener("click", () => {
+      S.myCoords = S.here.name ? null : { lat: S.here.lat, lon: S.here.lon };
       S.sqlPlace = placeOf(defaultSql());
-      S.myCoords = null;
       S.sqlDirty = true; // filled in, not run
       box.value = defaultSql();
       renderSqlPlaces();
@@ -1228,6 +1272,7 @@
     setTimezone(S.cfg.timezone);
     if (BLOG_URL) Object.assign($("#blogLink"), { href: BLOG_URL, hidden: false });
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
+    S.here = venue(); // the browser's location replaces it in locate(), if allowed
     S.variable = defaultVariable();
     initSqlEditor();
     renderVarToggle();
@@ -1264,6 +1309,7 @@
     }
     setInterval(() => { renderStrip(); renderCommits(); }, 1000);
     scheduleAnim();
+    locate();
   }
 
   boot().catch((e) => showNotice(`Startup failed: ${e.message}`));
