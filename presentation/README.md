@@ -171,7 +171,7 @@ ways:
   `tile_base: /tiles/<repo>`.
 - **Small windows.** A window smaller than 1920 × 1080 shows the booth layout zoomed down to
   fit.
-- **Vendored libraries.** The build copies them into `web/vendor/` (`npm run vendor`).
+- **Vendored libraries.** The build copies them into `web/vendor/` (`npm run vendor`); the phone site in `site/` does the same.
 
 Vercel project settings: root directory `presentation`, framework preset "Other". The
 install command, build command and output directory come from `vercel.json`. Environment

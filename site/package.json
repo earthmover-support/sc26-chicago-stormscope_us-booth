@@ -1,1 +1,10 @@
-{"type":"module","dependencies":{"@vercel/functions":"3.11.1"}}
+{
+  "type": "module",
+  "scripts": {
+    "vendor": "rm -rf vendor && mkdir -p vendor && cp -R node_modules/maplibre-gl/dist vendor/maplibre"
+  },
+  "dependencies": {
+    "@vercel/functions": "3.11.1",
+    "maplibre-gl": "6.11.2"
+  }
+}
