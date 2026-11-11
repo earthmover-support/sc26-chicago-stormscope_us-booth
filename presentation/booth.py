@@ -17,6 +17,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 CONFIG = json.loads((HERE / "config.json").read_text())
+# the venue: the "you are here" marker and the default SQL place, unless the page knows better
+if CONFIG["location"] not in CONFIG["sql"]["places"]:
+    raise ValueError(f"config.json location {CONFIG['location']!r} is not one of sql.places")
 
 # "stormscope-us 2026-11-16T23:50 lead 0-120 min": one commit per init
 MSG_RE = re.compile(r"stormscope-us\s+(?P<init>\d{4}-\d{2}-\d{2}T\d{2}:\d{2})\b")
@@ -46,8 +49,8 @@ def place_queries() -> dict[str, str]:
 
 
 def default_sql() -> str:
-    """The query for the first place in sql.places."""
-    return next(iter(place_queries().values()))
+    """The query for the location's place in sql.places."""
+    return place_queries()[CONFIG["location"]]
 
 
 def fill_init(template: str, init: str) -> str:
@@ -219,7 +222,7 @@ def public_config(sql_editable: bool) -> dict:
         "hold_ms",
         "attract_reset_s",
         "timezone",
-        "station",
+        "location",
         "camera",
         "viewer_url",
         "qr_tile",
@@ -228,6 +231,7 @@ def public_config(sql_editable: bool) -> dict:
     return {k: CONFIG[k] for k in keys} | {
         "leads": all_leads(),
         "sql_places": place_queries(),
+        "places": CONFIG["sql"]["places"],
         "sql_box": CONFIG["sql"]["box_deg"],
         "sql_editable": sql_editable,
     }

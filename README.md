@@ -8,7 +8,15 @@ pipeline goes offline after the event.
 
 - Earth2Studio example: https://nvidia.github.io/earth2studio/main/examples/04_nowcasting/03_stormscope_goes_example/
 - Arraylake repo: https://app.earthmover.io/nvidia/sc26-chicago-stormscope_us-booth
-- Hosted presentation: https://nvidia-sc26-chicago.earthmover.io/
+- Hosted presentation: https://nvidia-sc26-chicago.earthmover.io/, centred on another
+  venue with `?location=` (a name from `sql.places` in
+  [`presentation/config.json`](presentation/config.json); a browser that already allows
+  location access uses its own position instead):
+  - SC26 Chicago (default): https://nvidia-sc26-chicago.earthmover.io/?location=SC26%20Chicago
+  - GTC DC: https://nvidia-sc26-chicago.earthmover.io/?location=GTC%20DC
+  - AGU26 SF: https://nvidia-sc26-chicago.earthmover.io/?location=AGU26%20SF
+  - AMS 2027 Denver: https://nvidia-sc26-chicago.earthmover.io/?location=AMS%202027%20Denver
+  - GTC San Jose: https://nvidia-sc26-chicago.earthmover.io/?location=GTC%20San%20Jose
 - Mobile viewer: https://nvidia-sc26-chicago-viewer.earthmover.io/
 
 [`scripts/stormscope_us_pipeline.py`](scripts/stormscope_us_pipeline.py) runs

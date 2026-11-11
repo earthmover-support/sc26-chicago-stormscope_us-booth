@@ -27,7 +27,7 @@
   "attract_reset_s": 180,
   "timezone": "America/Chicago",
 
-  "station": { "name": "SC26 · McCormick Place", "lat": 41.8517, "lon": -87.6167 },
+  "location": "SC26 Chicago",
   "camera": { "lon": -96.0, "lat": 38.5, "zoom": 3.3, "pitch": 32, "sway_deg": 10, "sway_period_s": 120,
               "cover": [-125, 24, -67, 50], "min_zoom": 2, "max_zoom": 8.5, "idle_reset_s": 30 },
 
