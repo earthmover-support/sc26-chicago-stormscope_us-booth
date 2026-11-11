@@ -4,9 +4,11 @@ Runs only the config.json query for one of `sql.places`, never free text or coor
 from the browser: the set of possible URLs stays small (places x inits of the last week),
 so the CDN keeps each answer for a day and a stranger cannot make the function run a new
 query per request. The CDN caches by exact URL, so a request that is not in the one
-canonical form (`?place=..&init=..`, the encoding `URLSearchParams` produces, nothing
-else) is redirected to it instead of run: a junk parameter or an odd percent-encoding
-costs one cheap redirect, not one SQL query.
+canonical form (`?place=..&init=..`, in that order, nothing else) is redirected to it
+instead of run: a junk parameter or a swapped order costs one cheap redirect, not one SQL
+query. The check compares decoded pairs, not the raw string: Vercel hands the function a
+re-encoded query string, so a raw comparison never matched and the redirect pointed at
+itself.
 """
 
 import datetime as dt
@@ -14,7 +16,7 @@ import re
 import sys
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from booth import (  # noqa: E402
@@ -42,8 +44,8 @@ def check_init(init: str) -> str:
 
 class handler(BaseHTTPRequestHandler):  # noqa: N801 (name the Vercel runtime looks for)
     def do_GET(self):  # noqa: N802
-        raw = urlsplit(self.path).query
-        args = {k: v[0] for k, v in parse_qs(raw).items()}
+        pairs = parse_qsl(urlsplit(self.path).query, keep_blank_values=True)
+        args = dict(pairs)
         if not args:
             return send_json(self, {"status": "idle"})
         queries = place_queries()
@@ -53,8 +55,9 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 (name the Vercel runtime lo
             init = check_init(args.get("init", ""))
         except ValueError as exc:
             return send_json(self, {"status": "error", "error": str(exc)}, 400)
-        canonical = urlencode({"place": args["place"], "init": init})
-        if raw != canonical:
+        wanted = [("place", args["place"]), ("init", init)]
+        if pairs != wanted:
+            canonical = urlencode(wanted)
             self.send_response(308)
             self.send_header("Location", f"/api/sql?{canonical}")
             self.send_header("Cache-Control", "no-store")
