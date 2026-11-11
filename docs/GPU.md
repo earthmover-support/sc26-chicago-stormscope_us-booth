@@ -133,7 +133,7 @@ each new init:
 ```bash
 (set -a; . ./.env; set +a
  uv run coiled run --workspace earthmover-devs --name stormscope-us-gpu --region us-east-1 \
-   --ami-version DL --keepalive 4h --skip-ssd-mount --vm-type g6e.xlarge \
+   --ami-version DL --keepalive 12h --skip-ssd-mount --vm-type g6e.xlarge --vm-type g6e.2xlarge \
    --container nvcr.io/nvidia/physicsnemo/physicsnemo:26.08 --root --disk-size 200 \
    --docker-shm-size "1 GiB" --file scripts/ --detach \
    --env ARRAYLAKE_API_TOKEN="$ARRAYLAKE_API_TOKEN" \
@@ -149,7 +149,15 @@ on a `g7e` the kernel logs `NVRM: ... requires use of the NVIDIA open kernel mod
 and `nvidia-smi` finds no devices. The `DL` AMI (Deep Learning Base OSS Nvidia Driver)
 works on all GPU types.
 
-**Pass `--keepalive`** (for example `4h`). With `--detach` and no keepalive, Coiled stops
+**The keepalive is a hard cap, not a grace period.** Coiled stops the VM when the
+keepalive expires, counted from the last `coiled run`, even while the command is still
+running: cluster 2358965 (`--keepalive 4h`) was stopped at 02:15:41 UTC on 2026-11-11,
+exactly 4 h after its last `coiled run` (22:15:42), in the middle of a healthy pipeline
+loop. Set it longer than you need the pipeline (for example `12h` for one day, or the
+whole booth period) and stop the VM yourself. Another `coiled run` with the same
+`--name` restarts the clock but also kills the running command.
+
+**Pass `--keepalive`.** With `--detach` and no keepalive, Coiled stops
 the VM 10 ms after the command exits, and that GPU can be gone on the next launch. It
 also stopped the VM while the command was still running: twice it ended during the
 bootstrap's first `pip install` (clusters 2352426 and 2355602), but never with a keepalive.
