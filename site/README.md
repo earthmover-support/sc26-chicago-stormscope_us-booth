@@ -16,10 +16,11 @@ The page has these controls and behaviours:
   switches to it when it is complete.
 
 There is no server. The folder holds `index.html`, `sw.js`, three logo SVGs and one Vercel
-function, `api/tiles.js`. The only build step, `npm run vendor`, copies MapLibre GL from npm
-(version pinned in `package.json`) into `vendor/maplibre/`, as the booth page does. The page
-loads MapLibre from there, not from a CDN, so no third party can change the script that
-phones run. Locally: `npm ci && npm run vendor`, then serve the folder.
+function, `api/tiles.js`. The only build step, `npm run build`, copies the page into `public/`
+(what Vercel serves) and MapLibre GL from npm (version pinned in `package.json`) into
+`public/vendor/maplibre/`, as the booth page does. The page loads MapLibre from there, not
+from a CDN, so no third party can change the script that phones run. Locally:
+`npm ci && npm run build`, then serve `public/`.
 
 ## Tile cache in the browser
 

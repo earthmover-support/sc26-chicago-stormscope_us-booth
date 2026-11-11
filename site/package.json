@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "vendor": "rm -rf vendor && mkdir -p vendor && cp -R node_modules/maplibre-gl/dist vendor/maplibre"
+    "build": "rm -rf public && mkdir -p public/vendor && cp -R index.html sw.js *.svg fonts public/ && cp -R node_modules/maplibre-gl/dist public/vendor/maplibre"
   },
   "dependencies": {
     "@vercel/functions": "3.11.1",
