@@ -16,7 +16,10 @@ The page has these controls and behaviours:
   switches to it when it is complete.
 
 There is no build step and no server. The folder holds `index.html`, `sw.js`, three logo
-SVGs and one Vercel function, `api/tiles.js`.
+SVGs, one Vercel function, `api/tiles.js`, and `vendor/`, a copy of MapLibre GL 6.11.2 from npm.
+The page loads MapLibre from `vendor/`, not from a CDN, so no third party can change the
+script that phones run. To update it, copy `maplibre-gl.mjs` and `maplibre-gl.css` from
+`presentation/node_modules/maplibre-gl/dist/` and change the version in this sentence.
 
 ## Tile cache in the browser
 
