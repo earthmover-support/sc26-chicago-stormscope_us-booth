@@ -126,8 +126,11 @@ there first.
    add them under `variables` in `config.json`.
 5. **Run length.** The strip and scrubber show the observed +0 frame plus 12 steps, +10 to
    +120 min (`lead_steps`, `lead_step_min`). `run_phases_s` are the strip's per-phase
-   lengths. We measured them on an L40S on 2026-11-09: fetch 5–7 s, 3.3–4.1 s per step,
-   commit 0.5–0.7 s ([GPU.md](../docs/GPU.md#inference-timing-log)). `run_interval_min`
+   lengths, measured on an L40S: fetch 1.3 s with the frame cache (only the newest
+   MCMIPC file is new per cycle, see
+   [END2END_NEARREALTIME_PERFORMANCE.md](../docs/END2END_NEARREALTIME_PERFORMANCE.md)),
+   3.3–4.1 s per step, commit 0.5–0.7 s
+   ([GPU.md](../docs/GPU.md#inference-timing-log)). `run_interval_min`
    is the init cadence, one per 5-min CONUS scan.
 6. **QR code.** `viewer_url` in `config.json` sets the first QR code on the last panel,
    slide 8.
