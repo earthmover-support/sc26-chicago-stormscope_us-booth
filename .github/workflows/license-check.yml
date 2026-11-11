@@ -83,6 +83,7 @@ jobs:
             icechunk \
             cuda-toolkit \
             nvidia-cublas \
+            nvidia-cuda-cccl \
             nvidia-cuda-cupti \
             nvidia-cuda-nvrtc \
             nvidia-cuda-runtime \
