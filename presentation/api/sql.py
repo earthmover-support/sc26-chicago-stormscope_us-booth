@@ -1,8 +1,9 @@
-"""GET /api/sql on the hosted page: ?place=<name>&init=<...> or ?lat=<..>&lon=<..>&init=<...>.
+"""GET /api/sql on the hosted page: ?place=<name>&init=<...>.
 
-Runs only the config.json query for one of `sql.places` or for a coordinate inside
-`data_bounds`, never free text from the browser. The URL names everything the answer
-depends on, so the CDN keeps each answer for a day.
+Runs only the config.json query for one of `sql.places`, never free text or coordinates
+from the browser: the set of possible URLs stays small (places x inits of the last week),
+so the CDN keeps each answer for a day and a stranger cannot make the function run a new
+query per request.
 """
 
 import datetime as dt
@@ -17,7 +18,6 @@ from booth import (  # noqa: E402
     CONFIG,
     fill_init,
     place_queries,
-    query_for_coords,
     run_sql_once,
     send_json,
     utcnow,
@@ -37,23 +37,6 @@ def check_init(init: str) -> str:
     return init
 
 
-def check_coords(lat: str, lon: str) -> tuple[float, float]:
-    """Numeric lat/lon inside data_bounds [west, south, east, north]. Raises ValueError."""
-    try:
-        la, lo = float(lat), float(lon)
-    except (TypeError, ValueError):
-        raise ValueError("lat and lon must be numbers") from None
-    if not (-90 <= la <= 90 and -180 <= lo <= 180):
-        raise ValueError("lat and lon out of range")
-    w, s, e, n = CONFIG["data_bounds"]
-    if not (w <= lo <= e and s <= la <= n):
-        raise ValueError(
-            f"location ({la:.2f}, {lo:.2f}) is outside the StormScope-US domain "
-            f"(lon {w}…{e}, lat {s}…{n})"
-        )
-    return la, lo
-
-
 class handler(BaseHTTPRequestHandler):  # noqa: N801 (name the Vercel runtime looks for)
     def do_GET(self):  # noqa: N802
         args = {k: v[0] for k, v in parse_qs(urlsplit(self.path).query).items()}
@@ -61,15 +44,9 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 (name the Vercel runtime lo
             return send_json(self, {"status": "idle"})
         queries = place_queries()
         try:
-            if "place" in args:
-                if args.get("place") not in queries:
-                    raise ValueError(f"place must be one of {', '.join(queries)}")
-                query = fill_init(queries[args["place"]], check_init(args.get("init", "")))
-            elif "lat" in args or "lon" in args:
-                la, lo = check_coords(args.get("lat", ""), args.get("lon", ""))
-                query = fill_init(query_for_coords(la, lo), check_init(args.get("init", "")))
-            else:
+            if args.get("place") not in queries:
                 raise ValueError(f"place must be one of {', '.join(queries)}")
+            query = fill_init(queries[args["place"]], check_init(args.get("init", "")))
         except ValueError as exc:
             return send_json(self, {"status": "error", "error": str(exc)}, 400)
         try:

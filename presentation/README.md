@@ -76,7 +76,8 @@ The page takes "here" from the first of these that applies:
 
 1. The browser's location, if the browser already has location permission and the location
    is inside `data_bounds`. The page never asks for permission. The marker then reads only
-   "you are here".
+   "you are here". On the hosted page the SQL default stays on the venue: its server
+   runs only the venue queries, never a query for a coordinate.
 2. `?location=<name>` in the page URL, for example `?location=GTC%20DC`. Use it to run one
    screen at another venue without a config edit. The camera shifts so that the venue
    stays on screen. The root README [lists the link for each venue](../README.md#links).
