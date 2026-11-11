@@ -147,9 +147,10 @@ running command.
 Without a keepalive, Coiled stops the VM 10 ms after the command exits, and that GPU
 can be gone on the next launch. On a `g7e.8xlarge`, a `--detach` run with no keepalive
 also stopped twice during the bootstrap's first `pip install`. This did not happen with a
-keepalive. `scripts/coiled_gpu_benchmark.sh` therefore uses `--keepalive 30m` and stops
-each cluster itself when the run is done. A later `coiled run` with the same `--name`
-reuses the running VM. Stop it with
+keepalive. The instance benchmarks in the timing log therefore ran with `--keepalive 30m`
+and `--max-runs 4`, and the cluster was stopped by hand when the run was done. (The
+benchmark script is gone: it published into the booth repo and would have raced the live
+pipeline.) A later `coiled run` with the same `--name` reuses the running VM. Stop it with
 `uv run coiled cluster stop --workspace earthmover-devs <name>`.
 
 **Pass `--skip-ssd-mount`** on instances with a local NVMe SSD (`g6e`, `g6`, `g5`). On
