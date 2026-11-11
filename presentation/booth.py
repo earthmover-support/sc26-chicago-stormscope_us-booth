@@ -18,8 +18,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 CONFIG = json.loads((HERE / "config.json").read_text())
 # the venue: the "you are here" marker and the default SQL place, unless the page knows better
-if CONFIG["station"] not in CONFIG["sql"]["places"]:
-    raise ValueError(f"config.json station {CONFIG['station']!r} is not one of sql.places")
+if CONFIG["location"] not in CONFIG["sql"]["places"]:
+    raise ValueError(f"config.json location {CONFIG['location']!r} is not one of sql.places")
 
 # "stormscope-us 2026-11-16T23:50 lead 0-120 min": one commit per init
 MSG_RE = re.compile(r"stormscope-us\s+(?P<init>\d{4}-\d{2}-\d{2}T\d{2}:\d{2})\b")
@@ -49,8 +49,8 @@ def place_queries() -> dict[str, str]:
 
 
 def default_sql() -> str:
-    """The query for the station's place in sql.places."""
-    return place_queries()[CONFIG["station"]]
+    """The query for the location's place in sql.places."""
+    return place_queries()[CONFIG["location"]]
 
 
 def fill_init(template: str, init: str) -> str:
@@ -222,7 +222,7 @@ def public_config(sql_editable: bool) -> dict:
         "hold_ms",
         "attract_reset_s",
         "timezone",
-        "station",
+        "location",
         "camera",
         "viewer_url",
         "qr_tile",

@@ -269,10 +269,10 @@
     hereMarker.setLngLat([S.here.lon, S.here.lat]);
   }
 
-  // The venue: ?station=<sql.places name> for this screen, else config.json station.
+  // The venue: ?location=<sql.places name> for this screen, else config.json location.
   function venue() {
-    const asked = new URLSearchParams(location.search).get("station");
-    const name = asked in S.cfg.places ? asked : S.cfg.station;
+    const asked = new URLSearchParams(location.search).get("location");
+    const name = asked in S.cfg.places ? asked : S.cfg.location;
     const [lat, lon] = S.cfg.places[name];
     return { name, lat, lon };
   }
@@ -1131,7 +1131,7 @@
     sqlBox().value = defaultSql();
     S.sqlPlace = placeOf(defaultSql());
     renderSqlPlaces();
-    if (S.cfg.sql_editable && defaultSql() !== sqlFor(S.cfg.station)) runSql(defaultSql());
+    if (S.cfg.sql_editable && defaultSql() !== sqlFor(S.cfg.location)) runSql(defaultSql());
   }
 
   function initSqlEditor() {

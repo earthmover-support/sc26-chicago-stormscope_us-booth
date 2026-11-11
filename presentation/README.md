@@ -13,7 +13,7 @@ presentation/
                    tiles.js, the tile proxy
   requirements.txt hosted: the functions' dependencies
   vercel.json      hosted: build, output directory, function timeout
-  config.json      everything tunable: tile service, variables, timings, station, SQL
+  config.json      everything tunable: tile service, variables, timings, location, SQL
   package.json     MapLibre GL + qrcode-generator, vendored so the booth runs without CDNs
                    (the dark CARTO basemap and the Earthmover Compute tiles still need the network)
   record_video.sh  records the live page to an MP4, the fallback for a booth without internet
@@ -59,9 +59,9 @@ and on `water_vapor` while it is dark.
 "Here" is the "you are here" marker, the day/night default and the default live SQL place:
 - the browser's location, if the browser already has location permission (the page never
   asks) and it lies inside `data_bounds` (the marker then reads just "you are here");
-- else `?station=<name>` in the page URL, e.g. `?station=GTC%20DC`, to run one screen at
+- else `?location=<name>` in the page URL, e.g. `?location=GTC%20DC`, to run one screen at
   another venue without editing config;
-- else `station` in `config.json` (`"SC26 Chicago"`). Both name an entry in `sql.places`,
+- else `location` in `config.json` (`"SC26 Chicago"`). Both name an entry in `sql.places`,
   the venue chips on slide 8; add a venue there first.
 
 `config.json` is read when `server.py` starts: restart it after editing.
