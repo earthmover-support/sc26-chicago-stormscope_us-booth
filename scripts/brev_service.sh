@@ -25,13 +25,14 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
     docker run --name "$NAME-build" --gpus all -e BOOTSTRAP_INSTALL_ONLY=1 \
         -v "$APP_DIR/scripts:/work/scripts:ro" -w /work \
         "$BASE_IMAGE" bash scripts/coiled_bootstrap.sh
-    docker commit "$NAME-build" "$IMAGE" >/dev/null
+    # docker commit keeps the build container's env; clear the install-only flag
+    docker commit --change 'ENV BOOTSTRAP_INSTALL_ONLY=' "$NAME-build" "$IMAGE" >/dev/null
     docker rm "$NAME-build" >/dev/null
 fi
 
 step "pipeline (continuous, --n-steps 12)"
 exec docker run --rm --name "$NAME" --gpus all --shm-size 1g \
-    --env-file "$ENV_FILE" \
+    --env-file "$ENV_FILE" -e BOOTSTRAP_INSTALL_ONLY= \
     -e TORCHINDUCTOR_CACHE_DIR=/root/.cache/torchinductor \
     -v "$STATE/cache:/root/.cache" \
     -v "$STATE/outputs:/work/outputs" \
