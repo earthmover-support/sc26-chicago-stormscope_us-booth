@@ -35,7 +35,6 @@ dependencies = [
 [dependency-groups]
 dev = [
     "coiled>=1.135.6",
-    "pytest>=9.2.0",
 ]
 
 [project.optional-dependencies]

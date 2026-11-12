@@ -80,5 +80,6 @@ Candidates, not yet measured:
   Per step on the critical path, torch on the CPU with 4 threads: `true_color` 0.083 s,
   `water_vapor` 0.019 s. On the GPU these should be shorter still (inference, not
   measured). The run prints `true_color fields: N of 13 not ready` with its timing line;
-  N is 0 when the wait for the next GOES file is longer than computing the new fields. `tests/test_composites.py` checks the torch path
-  against the numpy recipe of #16: within 1 byte, ≥ 99.9 % of pixels identical.
+  N is 0 when the wait for the next GOES file is longer than computing the new fields.
+  Checked once on that VM against the numpy recipe of #16 (synthetic step, day, terminator
+  and night): within 1 byte, ≥ 99.9 % of pixels identical.

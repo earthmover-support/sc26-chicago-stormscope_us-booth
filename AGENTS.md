@@ -26,7 +26,6 @@ is kept besides its structure.
 ├── scripts/        # GPU pipeline: GOES-19 fetch -> StormScope-US inference -> Icechunk/Arraylake ingest
 ├── presentation/   # booth screen: web app (MapLibre globe, explainer panels, live SQL), its local server, and Vercel functions for the hosted copy
 ├── site/           # static MapLibre globe hosted on Vercel: init/variable selector, lead-time playback
-├── tests/        # unit tests for the composites and the true_color field cache (`uv run pytest tests`)
 ├── docs/           # end-to-end latency, stage by stage, with every improvement measured
 ├── pyproject.toml  # uv project; `gpu` extra adds NATTEN + earth2grid for linux+CUDA
 └── README.md       # overview, viz/tiles setup, how to run the pipeline
@@ -39,5 +38,4 @@ is kept besides its structure.
 ## Conventions
 
 - `uvx pre-commit run --all-files` for ruff.
-- `uv run pytest tests` for the composite unit tests (CPU only, no network).
 - Placeholders (`TODO-<name>`) mark infra that does not exist yet; none are left.

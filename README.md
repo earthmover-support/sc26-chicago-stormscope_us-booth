@@ -127,9 +127,6 @@ The pipeline reads its credentials from a local `.env` (see [`.env.example`](.en
 
 - `ARRAYLAKE_API_TOKEN`: the ingest target. GOES-19 data is public.
 
-Unit tests for the composites (no GPU, network or credentials needed):
-`uv run pytest tests`.
-
 The pipeline makes one commit per init, after the last step. A run that stops partway
 therefore publishes nothing. A rerun of the same init overwrites its slice.
 
