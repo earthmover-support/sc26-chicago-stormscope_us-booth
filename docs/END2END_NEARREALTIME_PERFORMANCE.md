@@ -37,6 +37,7 @@ One row per change, measured before and after on the same setup. Link the PR.
 | 2026-11-09 | baseline: Berlin setup migrated to US | all | – | see Stages | c226415, 25a10ee, 4e19d47 |
 | 2026-11-10 | keep decoded GOES frames in memory between inits (`FrameCache`); only the newest file is read | 4, 5 | fetch 4.1 s (1 new + 5 cached files decoded again) | fetch 1.3 s (1 new + 5 from memory) | [#1](https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth/pull/1) |
 | 2026-11-10 | bucket listing every 5 s instead of 15 s (`--wait-seconds` default) | 3 | ≤ 15 s wait after the last input file is listed | ≤ 5 s | [#5](https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth/pull/5) |
+| 2026-11-12 | `true_color` sun-angle + Rayleigh correction before the stretch (look, not speed); geometry on every 8th pixel | 5 | `true_color` 0.12 s per frame | 0.58 s per frame (0.75 s more at full-res geometry); not yet measured on the L40S node | this PR |
 
 Candidates, not yet measured:
 
@@ -68,3 +69,7 @@ Candidates, not yet measured:
   3.5 s. Init 15:40 on `frame-cache` reuses the 5 frames of init 15:30 from memory: fetch
   1.3 s, total 41.7 s. An init reuses frames from the init 10 min earlier, so the first two
   inits after a start read every file.
+- `true_color` correction (stage 5): one observed CONUS frame (2026-11-11 19:00 UTC,
+  native GOES grid 1500 × 2500, ~2× the stored 1024 × 1792 grid) on an Apple M-series laptop
+  CPU, LUTs already loaded. Geometry on every 8th pixel vs every pixel: ≤ 1 byte difference
+  for 99.9 % of pixels.
