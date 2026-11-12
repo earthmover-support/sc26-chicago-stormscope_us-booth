@@ -78,7 +78,9 @@ Wants=network-online.target
 [Service]
 ExecStartPre=-/bin/sh -c 'docker rm -f $UNIT >/dev/null 2>&1'
 ExecStart=/bin/bash $APP_DIR/scripts/brev_service.sh
-ExecStop=/bin/sh -c 'docker stop -t 30 $UNIT'
+# systemd also runs ExecStop after the main process exits on its own, when the --rm
+# container is already gone; '-' keeps that from masking the real exit status.
+ExecStop=-/bin/sh -c 'docker stop -t 30 $UNIT >/dev/null 2>&1'
 Restart=always
 RestartSec=30
 TimeoutStartSec=0
