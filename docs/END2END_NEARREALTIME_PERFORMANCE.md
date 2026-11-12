@@ -38,6 +38,7 @@ One row per change, measured before and after on the same setup. Link the PR.
 | 2026-11-10 | keep decoded GOES frames in memory between inits (`FrameCache`); only the newest file is read | 4, 5 | fetch 4.1 s (1 new + 5 cached files decoded again) | fetch 1.3 s (1 new + 5 from memory) | [#1](https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth/pull/1) |
 | 2026-11-10 | bucket listing every 5 s instead of 15 s (`--wait-seconds` default) | 3 | ≤ 15 s wait after the last input file is listed | ≤ 5 s | [#5](https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth/pull/5) |
 | 2026-11-12 | `true_color` sun-angle + Rayleigh correction before the stretch (look, not speed); geometry on every 8th pixel | 5 | `true_color` 0.12 s per frame | 0.58 s per frame (0.75 s more at full-res geometry); not yet measured on the L40S node | [#16](https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth/pull/16) |
+| 2026-11-12 | `true_color` correction fields computed ahead of use in a background thread, composites in torch on the GPU (`TrueColorGeometry`) | 5 | `true_color` 0.58 s per frame on the CPU between steps (#16), ~20 s more per run reported on the L40S node, not broken down | not yet measured on the L40S node | [#17](https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth/pull/17) |
 
 Candidates, not yet measured:
 
@@ -73,3 +74,11 @@ Candidates, not yet measured:
   native GOES grid 1500 × 2500, ~2× the stored 1024 × 1792 grid) on an Apple M-series laptop
   CPU, LUTs already loaded. Geometry on every 8th pixel vs every pixel: ≤ 1 byte difference
   for 99.9 % of pixels.
+- `true_color` fields + torch composites (stage 5, #17): 4 vCPU cloud VM, no GPU, stored
+  grid 1024 × 1792, pyspectral Rayleigh lookup replaced by a stand-in (its tables were not
+  reachable from that VM). Fields of one valid time, computed in the background: 0.40 s.
+  Per step on the critical path, torch on the CPU with 4 threads: `true_color` 0.083 s,
+  `water_vapor` 0.019 s. On the GPU these should be shorter still (inference, not
+  measured). The run prints `true_color fields: N of 13 not ready` with its timing line;
+  N is 0 when the wait for the next GOES file is longer than computing the new fields. `tests/test_composites.py` checks the torch path
+  against the numpy recipe of #16: within 1 byte, ≥ 99.9 % of pixels identical.
