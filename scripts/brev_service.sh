@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # Run by the systemd service `stormscope-us` that scripts/brev_setup.sh installs on a
 # Brev VM. Runs the pipeline continuously in the NGC PhysicsNeMo container, as on Coiled
 # (docs/GPU.md).

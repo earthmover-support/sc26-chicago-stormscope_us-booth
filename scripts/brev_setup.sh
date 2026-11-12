@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # Setup script for the StormScope-US Brev launchable (VM Mode). Paste it into the
 # launchable's "Setup script" field; see docs/BREV.md.
 #
