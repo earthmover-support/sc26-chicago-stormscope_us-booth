@@ -188,10 +188,20 @@ the GOES view or the region, or when its step is not written yet. There is no CF
   ```
   R = C02 (0.64 µm)    G = 0.45·C02 + 0.10·C03 (0.86 µm) + 0.45·C01    B = C01 (0.47 µm)
   ```
-  The script clips each band to 0–1 and applies EUMETSAT's true-color contrast curve, as in
-  the Berlin demo. The curve maps reflectance·255 `[0, 30, 60, 120, 190, 255]` to
-  `[0, 110, 160, 210, 240, 255]`, linear in between. There is no Rayleigh or solar-zenith
-  correction.
+  The script first corrects the reflectances, as satpy's ABI `true_color` does, then
+  stretches them. Correct first: a stretch alone brightens the bluish Rayleigh haze with the
+  surface.
+  1. Sun angle: divide each band by cos(sun zenith), fading out from 88° to 95°.
+  2. Rayleigh: subtract the scattered-light reflectance from C01 and C02 (pyspectral,
+     `us-standard`, `rayleigh_only`, GOES-East geometry). Over bright cloud (C02 above 20 %)
+     the correction is relaxed, as pyspectral does.
+  3. Terminator: fade to black between sun zenith 55° and 90° (satpy `sunz_reduced`, from
+     the FCI recipe), so the image dims into night.
+  4. Stretch: EUMETSAT's true-color contrast curve, as in the Berlin demo. It maps
+     reflectance (0–100 % as 0–255) `[0, 30, 60, 120, 190, 255]` to
+     `[0, 110, 160, 210, 240, 255]`, linear in between.
+
+  The angles and the Rayleigh lookup run on every 8th pixel and are interpolated back.
 - `water_vapor`: CIRA Simple Water Vapor RGB, day and night. It uses inverted brightness
   temperatures, linear, gamma 1:
   - R = C13, 278.96 → 202.29 K: cloud height.

@@ -482,7 +482,7 @@
   // display names for the variable keys in config.json
   const VAR_LABELS = { true_color: "True Color", water_vapor: "Water Vapor" };
   const VAR_DEFINITIONS = {
-    true_color: "True Color: an RGB composite showing clouds and Earth’s surface in daylight. A rendered satellite view, not a direct cloud-cover measurement.",
+    true_color: "True Color: an RGB composite showing clouds and Earth’s surface in daylight, corrected for sun angle and for the bluish haze of sunlight scattered by the air (Rayleigh). A rendered satellite view, not a direct cloud-cover measurement.",
     water_vapor: "Water Vapor: an RGB composite of two water-vapor channels and the infrared window. Green and black show dry air, blue and purple moist air, white high cloud; jet streams and troughs stand out. Works day and night.",
   };
   function setVariableHelp(button, name) {
