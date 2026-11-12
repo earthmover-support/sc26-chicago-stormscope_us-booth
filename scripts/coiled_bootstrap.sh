@@ -37,6 +37,12 @@ fi
 step "torch CUDA check"
 $PY -c "import torch; print('torch', torch.__version__, 'cuda', torch.version.cuda, torch.cuda.get_device_name(0))"
 
+# Brev (scripts/brev_service.sh) installs once and commits the container to an image.
+if [ -n "${BOOTSTRAP_INSTALL_ONLY:-}" ]; then
+    step "install only: done"
+    exit 0
+fi
+
 step "pipeline $*"
 export PYTHONUNBUFFERED=1
 $PY scripts/stormscope_us_pipeline.py "$@"
