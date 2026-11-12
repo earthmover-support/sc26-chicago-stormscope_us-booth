@@ -16,9 +16,10 @@ the Brev CLI cannot create launchables.
   pipeline in the NGC PhysicsNeMo container through
   [`scripts/coiled_bootstrap.sh`](../scripts/coiled_bootstrap.sh), with `--n-steps 12`.
   The first start installs the dependencies and commits the container as the local image
-  `stormscope-us:26.08`, so later starts skip the installs. systemd restarts the
+  `stormscope-us:26.08-<bootstrap hash>`, so later starts skip the installs. A change to
+  `coiled_bootstrap.sh` (a new dependency) changes the tag and reinstalls on the next start. systemd restarts the
   pipeline 30 s after it exits, and again after a reboot or a Brev stop/start.
-- Model weights, the torch.compile cache, and local outputs live in
+- Model weights, pyspectral's lookup tables, the torch.compile cache, and local outputs live in
   `/var/lib/stormscope-us` on the VM, so a restart does not download or compile again.
 
 ## Create the launchable
@@ -65,7 +66,7 @@ that, each new GOES-19 scan gives a `Published to arraylake` line about 45 s lat
 | Restart | `sudo systemctl restart stormscope-us` |
 | Change a setup value | `sudo nano /etc/stormscope-us/env`, then restart |
 | Run another commit | rerun the setup script with new values, e.g. `sudo ARRAYLAKE_API_TOKEN=... STORMSCOPE_GIT_REF=<ref> bash /opt/stormscope-us/scripts/brev_setup.sh` |
-| Reinstall dependencies | `sudo docker rmi stormscope-us:26.08`, then restart |
+| Reinstall dependencies | `sudo docker rmi $(sudo docker images -q stormscope-us)`, then restart |
 
 Stop or delete the instance in the Brev Console (or `brev stop` / `brev delete`) after
 booth hours and after the event; stopping the service alone does not stop billing.

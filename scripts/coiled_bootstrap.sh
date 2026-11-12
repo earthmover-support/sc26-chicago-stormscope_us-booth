@@ -18,14 +18,15 @@ step "python: $PY ($($PY --version 2>&1))"
 step "nvidia-smi"
 nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv
 
-if ! $PY -c "import natten, earth2grid, earth2studio" 2>/dev/null; then
+if ! $PY -c "import natten, earth2grid, earth2studio, pyorbital, pyspectral" 2>/dev/null; then
     step "pip: earth2studio + ingest deps"
     $PY -m pip list --format=freeze \
         | grep -iE '^(torch|torchvision|torchaudio|triton|nvidia-physicsnemo|numpy)==' \
         > /tmp/base-constraints.txt
     $PY -m pip install -q --root-user-action=ignore --no-cache-dir -c /tmp/base-constraints.txt \
         "earth2studio==${EARTH2STUDIO_VERSION}" "icechunk>=2.2" "arraylake>=1.3" \
-        "pyproj>=3.7.1" "scipy>=1.15.2" "nvtx>=0.2.11" "omegaconf>=2.3.0" python-dotenv
+        "pyproj>=3.7.1" "scipy>=1.15.2" "nvtx>=0.2.11" "omegaconf>=2.3.0" python-dotenv \
+        "pyorbital>=1.14.0" "pyspectral>=0.14.3"
     step "pip: natten"
     $PY -m pip install -q --root-user-action=ignore natten==0.21.7+torch2130cu132 -f https://whl.natten.org
     step "pip: earth2grid (source build)"
