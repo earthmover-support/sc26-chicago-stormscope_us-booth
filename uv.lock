@@ -586,6 +586,15 @@ wheels = [
 ]
 
 [[package]]
+name = "defusedxml"
+version = "0.7.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0f/d5/c66da9b79e5bdb124974bfe172b4daf3c984ebd9c2a06e2b8a4dc7331c72/defusedxml-0.7.1.tar.gz", hash = "sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69", size = 75520, upload-time = "2021-03-08T10:59:26.269Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/6c/aa3f2f849e01cb6a001cd8554a88d4c77c5c1a31c95bdf1cf9301e6d9ef4/defusedxml-0.7.1-py2.py3-none-any.whl", hash = "sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61", size = 25604, upload-time = "2021-03-08T10:59:24.45Z" },
+]
+
+[[package]]
 name = "deprecated"
 version = "3.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2098,6 +2107,15 @@ wheels = [
 ]
 
 [[package]]
+name = "platformdirs"
+version = "4.14.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/9a/8475be631fb33ca1466915e70fd594c42a4e84b512db650eaa14f90fe75d/platformdirs-4.14.5.tar.gz", hash = "sha256:32e9921db7385aa8169bee4fe9501923e5715ba9fb7ea3b9c69b0d8e0639f7a1", size = 71464, upload-time = "2026-11-04T16:54:50.358Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7c/ae/ecbbbfd0e4343a6a521d49b3c8656fb4643dee2a4f6eaf941cf3280391a8/platformdirs-4.14.5-py3-none-any.whl", hash = "sha256:8e778c6fa421516f4d3369449f8df3b0e1b72c0e0005fe88e3ec772d0a14e750", size = 35402, upload-time = "2026-11-04T16:54:48.875Z" },
+]
+
+[[package]]
 name = "prometheus-client"
 version = "0.26.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2350,6 +2368,23 @@ wheels = [
 ]
 
 [[package]]
+name = "pyorbital"
+version = "1.14.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "defusedxml" },
+    { name = "donfig" },
+    { name = "numpy" },
+    { name = "pyproj" },
+    { name = "requests" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f1/d8/c4b1795ec02ae39999247119a8259707b932cacc8194875368e612caedf2/pyorbital-1.14.0.tar.gz", hash = "sha256:d886cded3ab0e38c9a887ee53bbdbc1546c3addd4a84b6760c80d79382376757", size = 170407, upload-time = "2026-10-12T14:48:26.57Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/47/dc/f99af29f00c200538a8f7072a0be3c3efd9dd96ae460458f7f2ba072cb68/pyorbital-1.14.0-py3-none-any.whl", hash = "sha256:e12c199e469fd3fe1ccfe9d20db7db8a46b44d62bf5ceb314ff51d15c15bdc71", size = 157327, upload-time = "2026-10-12T14:48:25.238Z" },
+]
+
+[[package]]
 name = "pyparsing"
 version = "3.3.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2379,6 +2414,21 @@ wheels = [
 ]
 
 [[package]]
+name = "pyspectral"
+version = "0.14.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "h5py" },
+    { name = "numpy" },
+    { name = "platformdirs" },
+    { name = "python-geotiepoints" },
+    { name = "pyyaml" },
+    { name = "requests" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/63/ac/91edf5a3dac26d9a071ed2419767fa3769f84121bff2330c511f3c244fd6/pyspectral-0.14.3.tar.gz", hash = "sha256:b3c519d16ebb63b0dab96ad49ef67429415e97ec8890c6665769464402ba87a8", size = 3909791, upload-time = "2026-04-02T14:59:37.355Z" }
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -2397,6 +2447,26 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/74/26/2fbeedb218a787a5eea551c7532cac4e009f83d689dd2faa0d0353473f86/python_dotenv-1.2.4.tar.gz", hash = "sha256:f0d53e69935a851c0dcc78f3ab7aaccd8cabef0b92382b576b824212902873c0", size = 60824, upload-time = "2026-10-01T05:36:10Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl", hash = "sha256:42269a8a5b3fd54ffa6f3d84b18abed50064717576b4ecf03dc4a55d8aa04fdc", size = 23266, upload-time = "2026-10-01T05:36:08.633Z" },
+]
+
+[[package]]
+name = "python-geotiepoints"
+version = "1.9.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d7/1b/29472ee3c869bc4defb13e78e355448515d49ee34f684a471b4a4f3fa6bc/python_geotiepoints-1.9.0.tar.gz", hash = "sha256:0a7c8690f25f951e97b841f1e95ca4f437f35b08da8c2d8c535e24249e9aeafc", size = 7665794, upload-time = "2026-02-03T17:36:55.328Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/73/42/c8ea2f605114527290bb4f055682e02f1db8cbca3a67f1f616448cf57d50/python_geotiepoints-1.9.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:72febd502c214a1626ee1bc4bde38a137294f5e933e5252d0b95c4fe4af2dbd1", size = 480652, upload-time = "2026-02-03T17:36:02.858Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/2f/1413f917af72d06184d4928ef748ac398f1861369ef71ab7b21981abfe66/python_geotiepoints-1.9.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:5a47b78a667d61cf5d534b8fc7b63ed4c12649d77d0e161d4d7b96dcae22acbd", size = 429421, upload-time = "2026-02-03T17:36:03.99Z" },
+    { url = "https://files.pythonhosted.org/packages/14/d6/0004da72869d067af41a6aa0c0e72433133274882a19e68da8c622ad26ee/python_geotiepoints-1.9.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:d75232b418c82e0a4dda77e6ab5e32ec1f2b07ad7b5464d0aac5029dd193953a", size = 2862890, upload-time = "2026-02-03T17:36:05.339Z" },
+    { url = "https://files.pythonhosted.org/packages/c7/23/bd81981e38108fe2106c6099591e6258865a404fd31f3df4fe8a2ae38351/python_geotiepoints-1.9.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:cf6a38e998178d9c8b92d7d940fd549d39cafbcbe3b49d89ae010deef2784105", size = 2959640, upload-time = "2026-02-03T17:36:06.719Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/6f/edfe00dd6dcf5b8bce13bd5c2701644e3caf13b72132d0e6af5b290f3257/python_geotiepoints-1.9.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:231e69108a73cec420435e2f10b462560a5d4abf15496646122c4659be7467f3", size = 2954421, upload-time = "2026-02-03T17:36:08.444Z" },
+    { url = "https://files.pythonhosted.org/packages/03/54/95e0230db16db0043b2bcc204e43d151721cc646c5afbc5db2b5b61896e4/python_geotiepoints-1.9.0-cp312-cp312-win_amd64.whl", hash = "sha256:061c5b699cdaed432942539764ffb67645f5b518f50b93e766114fbc829b0f4b", size = 413301, upload-time = "2026-02-03T17:36:09.738Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/30/f9c57f035ac25fc15c8b1017700d0bc32111223e32f036decd2b40c7532d/python_geotiepoints-1.9.0-cp312-cp312-win_arm64.whl", hash = "sha256:085968f4c2d5a290605cd4bd23e27297d9ac9f2232630c8883506d3268e64d4a", size = 340947, upload-time = "2026-02-03T17:36:11.059Z" },
 ]
 
 [[package]]
@@ -2537,7 +2607,9 @@ dependencies = [
     { name = "nvidia-physicsnemo" },
     { name = "nvtx" },
     { name = "omegaconf" },
+    { name = "pyorbital" },
     { name = "pyproj" },
+    { name = "pyspectral" },
     { name = "python-dotenv" },
     { name = "scipy" },
     { name = "torch" },
@@ -2567,7 +2639,9 @@ requires-dist = [
     { name = "nvidia-physicsnemo", specifier = ">=2.2.2" },
     { name = "nvtx", specifier = ">=0.2.11" },
     { name = "omegaconf", specifier = ">=2.3.0" },
+    { name = "pyorbital", specifier = ">=1.14.0" },
     { name = "pyproj", specifier = ">=3.7.1" },
+    { name = "pyspectral", specifier = ">=0.14.3" },
     { name = "python-dotenv" },
     { name = "scipy", specifier = ">=1.15.2" },
     { name = "torch", specifier = ">=2.6" },

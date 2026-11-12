@@ -102,10 +102,18 @@ WATER_VAPOR_BANDS = [  # (channel, warm K -> 0, cold K -> 1) for R, G, B
     ("abi08c", 242.67, 214.66),  # upper-level WV 6.19 um
     ("abi10c", 261.03, 245.12),  # lower-level WV 7.34 um
 ]
-# EUMETSAT true-color contrast curve, as in the Berlin (FCI) pipeline: reflectance *255
-# (x) -> byte (y), linear in between. It lifts dark surfaces and compresses bright cloud,
-# so land reads clearer and less hazy than a plain gamma 2.2 (compared on a real frame).
+# EUMETSAT true-color contrast curve, as in the Berlin (FCI) pipeline: reflectance in %
+# *2.55 (x) -> byte (y), linear in between. It lifts dark surfaces and compresses bright
+# cloud. It runs after the sun-angle and Rayleigh corrections below: on uncorrected
+# reflectance it brightens the bluish Rayleigh haze along with the surface.
 TRUE_COLOR_STRETCH = ([0, 30, 60, 120, 190, 255], [0, 110, 160, 210, 240, 255])
+# Viewing geometry of GOES-East (sub-satellite point, km above the surface).
+GOES_SUBSAT_LON, GOES_ALT_KM = -75.2, 35786.0
+# Sun and satellite angles vary smoothly, so they and the Rayleigh lookup run on every
+# GEOMETRY_STRIDE-th pixel and are interpolated back: ~0.75 s less per frame than at full
+# resolution, within 1 byte for 99.9 % of pixels (docs/END2END_NEARREALTIME_PERFORMANCE.md).
+GEOMETRY_STRIDE = 8
+_rayleigh = None  # pyspectral corrector, loaded (and its LUT downloaded) on first use
 
 
 def _to_bytes(rgb01: np.ndarray) -> np.ndarray:
@@ -114,26 +122,99 @@ def _to_bytes(rgb01: np.ndarray) -> np.ndarray:
     return np.where(np.isnan(scaled), RGB_FILL, np.clip(np.round(scaled), 1, 255)).astype(RGB_DTYPE)
 
 
-def true_color(arr: np.ndarray, variables: list[str]) -> np.ndarray:
-    """CIMSS natural true-color RGB from ABI C01/C02/C03 reflectances.
+def _upsample(coarse: np.ndarray, shape: tuple[int, int], stride: int) -> np.ndarray:
+    """Bilinear from the `[::stride, ::stride]` subgrid back to `shape`."""
+    from scipy.ndimage import map_coordinates
 
-    ABI has no green band; the CIMSS recipe synthesizes one as
-    0.45 red + 0.10 veggie (0.86 um) + 0.45 blue. Each band is clipped to 0..1 and
-    put through the EUMETSAT contrast curve `TRUE_COLOR_STRETCH`. Takes a
-    (..., variable, y, x) rollout step and returns (..., y, x, rgb) uint8 as stored; NaN (outside the GOES view or the region) -> 0.
+    yy, xx = np.meshgrid(
+        np.arange(shape[0]) / stride, np.arange(shape[1]) / stride, indexing="ij", sparse=True
+    )
+    yy, xx = np.broadcast_arrays(yy, xx)
+    return map_coordinates(coarse, [yy, xx], order=1, mode="nearest").astype("float32")
+
+
+def sun_sat_geometry(lat, lon, valid_time, stride: int = GEOMETRY_STRIDE):
+    """Sun zenith (deg) and the Rayleigh path reflectance (%) of C01 and C02 at `valid_time`.
+
+    Returned at full resolution, with the Rayleigh terms not yet relaxed over bright
+    cloud (that needs the red band). Satellite angles are those of GOES-East.
     """
-    red, veggie, blue = (arr[..., list(variables).index(ch), :, :] for ch in TRUE_COLOR_CHANNELS)
+    global _rayleigh
+    from pyorbital import astronomy, orbital
+    from pyspectral.rayleigh import Rayleigh
+
+    if _rayleigh is None:
+        _rayleigh = Rayleigh(
+            "GOES-19", "abi", atmosphere="us-standard", aerosol_type="rayleigh_only"
+        )
+    utc = np.datetime64(valid_time, "us").astype(datetime)  # pyorbital wants a naive UTC datetime
+    clat = np.asarray(lat, "float64")[::stride, ::stride]
+    clon = np.asarray(lon, "float64")[::stride, ::stride]
+    sunz = astronomy.sun_zenith_angle(utc, clon, clat)
+    suna = np.rad2deg(astronomy.get_alt_az(utc, clon, clat)[1]) % 360
+    sata, sat_elev = orbital.get_observer_look(
+        GOES_SUBSAT_LON, 0.0, GOES_ALT_KM, utc, clon, clat, np.zeros_like(clon)
+    )
+    satz = 90.0 - sat_elev
+    azidiff = np.abs(suna - sata % 360)
+    azidiff = np.where(azidiff > 180, 360 - azidiff, azidiff)
+    shape = np.shape(lat)
+    path = {
+        band: _upsample(_rayleigh.get_reflectance(sunz, satz, azidiff, band), shape, stride)
+        for band in ("C01", "C02")
+    }
+    return _upsample(sunz, shape, stride), path
+
+
+def _sunz_corrected(refl, sunz, limit=88.0, max_sza=95.0):
+    """satpy `sunz_corrected` (`_sunzen_corr_cos_ndarray`): divide by cos(sun zenith),
+    fading the factor to 0 between `limit` and `max_sza` so it does not blow up."""
+    cos_zen = np.cos(np.deg2rad(sunz))
+    grad = 1.0 - np.log2(np.clip((sunz - limit) / (max_sza - limit), 0, None) + 1)
+    corr = np.where(sunz < limit, 1.0 / cos_zen, np.clip(grad, 0, None) / np.cos(np.deg2rad(limit)))
+    return refl * corr
+
+
+def _sunz_reduced(refl, sunz, limit=55.0, max_sza=90.0, strength=1.5):
+    """satpy `sunz_reduced` (`_sunzen_reduction_ndarray`): fade to black from `limit`
+    to `max_sza`, so the image dims into night instead of a bright, noisy terminator."""
+    factor = 1.0 - np.log2(np.clip((sunz - limit) / (max_sza - limit), 0, 1) + 1)
+    factor = factor**strength / (factor**strength + (1 - factor) ** strength)
+    return refl * np.where(sunz < limit, 1.0, factor)
+
+
+def true_color(arr: np.ndarray, variables: list[str], lat, lon, valid_time) -> np.ndarray:
+    """CIMSS natural true-color RGB from ABI C01/C02/C03 reflectances, corrected, then stretched.
+
+    satpy's ABI `true_color` chain plus its FCI terminator fade, in percent reflectance:
+    sun-angle correction (all bands), Rayleigh correction (C01, C02; relaxed over bright
+    cloud as pyspectral does), fade towards the terminator, synthetic green
+    0.45 red + 0.10 veggie (0.86 um) + 0.45 blue (CIMSS), then the EUMETSAT curve
+    `TRUE_COLOR_STRETCH`. Takes a (..., variable, y, x) rollout step valid at
+    `valid_time` on the `lat`/`lon` grid and returns (..., y, x, rgb) uint8 as stored;
+    NaN (outside the GOES view or the region) -> 0.
+    """
+    sunz, path = sun_sat_geometry(lat, lon, valid_time)
+    red, veggie, blue = (
+        _sunz_corrected(arr[..., list(variables).index(ch), :, :] * 100, sunz)
+        for ch in TRUE_COLOR_CHANNELS
+    )
+    # pyspectral: full correction below 20 % red reflectance, none at 100 % (cloud).
+    relax = np.clip(1 - (red - 20) / 80, 0, 1)
+    red, blue = red - path["C02"] * relax, blue - path["C01"] * relax
+    red, veggie, blue = (_sunz_reduced(b, sunz) for b in (red, veggie, blue))
     green = 0.45 * red + 0.10 * veggie + 0.45 * blue
     rgb = np.stack([red, green, blue], axis=-1)
-    rgb = np.interp(np.clip(rgb, 0, 1) * 255, *TRUE_COLOR_STRETCH) / 255
+    rgb = np.interp(np.clip(rgb, 0, 100) * 2.55, *TRUE_COLOR_STRETCH) / 255
     return _to_bytes(rgb)
 
 
-def water_vapor(arr: np.ndarray, variables: list[str]) -> np.ndarray:
+def water_vapor(arr: np.ndarray, variables: list[str], *_geometry) -> np.ndarray:
     """CIRA Simple Water Vapor RGB from ABI C13 / C08 / C10, day and night.
 
     Red is cloud height, green upper-level moisture, blue low-to-mid-level moisture.
-    Same (..., variable, y, x) -> (..., y, x, rgb) uint8 contract as `true_color`.
+    Same (..., variable, y, x) -> (..., y, x, rgb) uint8 contract as `true_color`;
+    the geometry arguments are unused.
     """
     rgb = np.stack(
         [
@@ -149,7 +230,8 @@ COMPOSITES = {"true_color": true_color, "water_vapor": water_vapor}
 COMPOSITE_ATTRS = {
     "true_color": {
         "long_name": "CIMSS natural true-color RGB composite (ABI C02 / synthetic green / "
-        "C01 reflectance, EUMETSAT contrast stretch), 0-255",
+        "C01 reflectance; sun-angle and Rayleigh corrected, then EUMETSAT contrast stretch), "
+        "0-255",
         "source_channels": " ".join(TRUE_COLOR_CHANNELS),
     },
     "water_vapor": {
@@ -655,21 +737,26 @@ def add_grid_mapping(backend, name: str, attrs: dict) -> None:
     backend.root[name].attrs.update(attrs)
 
 
-def step_outputs(model, x_pred, coords_pred: OrderedDict, channels: list[str]):
+def step_outputs(model, x_pred, coords_pred: OrderedDict, channels: list[str], lat, lon):
     """One rollout step -> the `(tensors, coords, names)` batches to hand `write`:
     the RGB composites, then the raw channels as int16 counts.
 
-    Crops to the requested region (a no-op for full CONUS). `copy=True` because the
-    generator keeps writing into its own buffers between yields, and the non-blocking
-    store write may still be reading.
+    Crops to the requested region (a no-op for full CONUS) and computes the composites
+    on the stored grid `lat`/`lon` (`output_grid`) at the step's valid time.
+    `copy=True` because the generator keeps writing into its own buffers between yields,
+    and the non-blocking store write may still be reading.
     """
     x_out, coords_out = model.crop_output(x_pred, coords_pred)
     arr = x_out.detach().to("cpu", torch.float32, copy=True).numpy()
     field_coords = OrderedDict((d, v) for d, v in coords_out.items() if d != "variable")
     rgb_coords = OrderedDict(**field_coords, rgb=RGB_VALUES)
+    (init,), (lead,) = coords_out["time"], coords_out["lead_time"]  # one step at a time
     names = list(COMPOSITES)
     composites = (
-        [torch.from_numpy(COMPOSITES[name](arr, channels)) for name in names],
+        [
+            torch.from_numpy(COMPOSITES[name](arr, channels, lat, lon, init + lead))
+            for name in names
+        ],
         rgb_coords,
         names,
     )
@@ -898,6 +985,9 @@ class StormScopeUSPipeline:
             self.device = torch.device(device)
         self.region = region
         self.model = load_model(self.device, region)
+        _, _, self.lat, self.lon = output_grid(self.model)
+        # Load pyspectral's Rayleigh tables now (downloaded on first use), not in the first run.
+        sun_sat_geometry(self.lat, self.lon, np.datetime64("2026-11-16T18:00"))
         # Keep each frame until the init 10 min later has reused it (+10 min margin).
         keep = self.n_frames * self.frame_step + timedelta(minutes=10)
         self.goes = FrameCache(GOES(satellite=GOES_SATELLITE, scan_mode=GOES_SCAN_MODE), keep)
@@ -938,7 +1028,9 @@ class StormScopeUSPipeline:
             tqdm(self.model.create_iterator(x, coords), total=n_steps + 1)
         ):
             # Non-blocking: the backend's thread pool uploads while the GPU computes.
-            for batch in step_outputs(self.model, x_pred, coords_pred, channels):
+            for batch in step_outputs(
+                self.model, x_pred, coords_pred, channels, self.lat, self.lon
+            ):
                 backend.write(*batch)
             now = time.monotonic()
             step_times.append(now - t_step)
