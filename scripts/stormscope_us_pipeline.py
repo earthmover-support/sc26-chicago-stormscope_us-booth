@@ -7,7 +7,8 @@ GOES-19 ABI CONUS observations (NOAA, AWS) -> Earth2Studio inference
 It finds the freshest complete
 input window by listing NOAA's `noaa-goes19` bucket (`latest_goes_slot`), stores two
 composites, `true_color` (day) and `water_vapor` (CIRA Simple Water Vapor RGB, day and
-night), and writes one Icechunk commit per init. Each 10-minute rollout step is handed
+night), plus the 8 predicted ABI channels as NOAA's int16 counts (`RAW_CHANNELS`), and
+writes one Icechunk commit per init. Each 10-minute rollout step is handed
 to the backend's background writers as it is produced, so uploads overlap inference,
 and the commit at the end of the rollout publishes the whole init at once. It writes to
 the root group of `nvidia/sc26-chicago-stormscope_us-booth` (see ARRAYLAKE_REPO below).
@@ -157,6 +158,63 @@ COMPOSITE_ATTRS = {
         "source_channels": " ".join(ch for ch, _, _ in WATER_VAPOR_BANDS),
     },
 }
+
+
+# The 8 channels StormScope predicts, stored as NOAA stores them in the MCMIPC files:
+# int16 counts with the per-band CF `scale_factor` / `add_offset` of `CMI_Cxx` and fill -1.
+# NOAA's precision is all the model ever sees, so finer output carries no information,
+# and int16 + zstd is ~4x smaller than float32 + zstd (measured on GOES-19 frames).
+# Counts are clipped to NOAA's `valid_range` (0..4095; C07 0..16383), so they fit a
+# signed int16 and need no `_Unsigned`. `xr.open_zarr` decodes them to float with NaN.
+RAW_DTYPE = "int16"
+RAW_FILL = -1
+RAW_CHANNELS = {  # channel: (scale_factor, add_offset, max count, units, long_name)
+    "abi01c": (0.00031746, 0.0, 4095, "1", "ABI C01 0.47 um blue reflectance factor"),
+    "abi02c": (0.00031746, 0.0, 4095, "1", "ABI C02 0.64 um red reflectance factor"),
+    "abi03c": (0.00031746, 0.0, 4095, "1", "ABI C03 0.86 um veggie reflectance factor"),
+    "abi07c": (
+        0.01309618,
+        197.31,
+        16383,
+        "K",
+        "ABI C07 3.9 um shortwave window brightness temperature",
+    ),
+    "abi08c": (
+        0.04224986,
+        138.05,
+        4095,
+        "K",
+        "ABI C08 6.2 um upper-level water vapor brightness temperature",
+    ),
+    "abi09c": (
+        0.04233911,
+        137.7,
+        4095,
+        "K",
+        "ABI C09 6.9 um mid-level water vapor brightness temperature",
+    ),
+    "abi10c": (
+        0.04988919,
+        126.91,
+        4095,
+        "K",
+        "ABI C10 7.3 um lower-level water vapor brightness temperature",
+    ),
+    "abi13c": (
+        0.06145332,
+        89.62,
+        4095,
+        "K",
+        "ABI C13 10.3 um clean longwave window brightness temperature",
+    ),
+}
+
+
+def encode_raw(field: np.ndarray, channel: str) -> np.ndarray:
+    """Physical values (NaN = missing) -> NOAA's int16 counts for `channel`, fill -1."""
+    scale, offset, top, _, _ = RAW_CHANNELS[channel]
+    counts = np.round((field - offset) / scale)
+    return np.where(np.isnan(counts), RAW_FILL, np.clip(counts, 0, top)).astype(RAW_DTYPE)
 
 
 # ============================================================================
@@ -597,23 +655,30 @@ def add_grid_mapping(backend, name: str, attrs: dict) -> None:
     backend.root[name].attrs.update(attrs)
 
 
-def step_composites(model, x_pred, coords_pred: OrderedDict, channels: list[str]):
-    """One rollout step -> the `(tensors, coords, names)` to hand `write`.
+def step_outputs(model, x_pred, coords_pred: OrderedDict, channels: list[str]):
+    """One rollout step -> the `(tensors, coords, names)` batches to hand `write`:
+    the RGB composites, then the raw channels as int16 counts.
 
-    Crops to the requested region (a no-op for full CONUS) and computes both
-    composites. `copy=True` because the generator keeps writing into its own buffers
-    between yields, and the non-blocking store write may still be reading.
+    Crops to the requested region (a no-op for full CONUS). `copy=True` because the
+    generator keeps writing into its own buffers between yields, and the non-blocking
+    store write may still be reading.
     """
     x_out, coords_out = model.crop_output(x_pred, coords_pred)
     arr = x_out.detach().to("cpu", torch.float32, copy=True).numpy()
-    rgb_coords = OrderedDict((d, v) for d, v in coords_out.items() if d != "variable")
-    rgb_coords["rgb"] = RGB_VALUES
+    field_coords = OrderedDict((d, v) for d, v in coords_out.items() if d != "variable")
+    rgb_coords = OrderedDict(**field_coords, rgb=RGB_VALUES)
     names = list(COMPOSITES)
-    return (
+    composites = (
         [torch.from_numpy(COMPOSITES[name](arr, channels)) for name in names],
         rgb_coords,
         names,
     )
+    raw = (
+        [torch.from_numpy(encode_raw(arr[..., i, :, :], ch)) for i, ch in enumerate(channels)],
+        field_coords,
+        list(channels),
+    )
+    return [composites, raw]
 
 
 def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
@@ -644,6 +709,35 @@ def add_composite_array(backend, name: str, shape, chunks, dims) -> None:
     backend.root[name].attrs.update({**GEOREF, **RGB_ENCODING, **COMPOSITE_ATTRS[name]})
 
 
+def add_raw_array(backend, name: str, shape, chunks, dims) -> None:
+    """Allocate one int16 raw-channel array (no data written) with NOAA's CF encoding.
+
+    The fill -1 is both the Zarr `fill_value` (unwritten chunks) and the CF `_FillValue`,
+    which xarray needs as an attribute to mask it on Zarr v3. JSON attributes have no
+    float32, so xarray decodes to float64; `.astype("float32")` loses nothing.
+    """
+    scale, offset, _, units, long_name = RAW_CHANNELS[name]
+    backend.root.create_array(
+        name,
+        shape=shape,
+        chunks=chunks,
+        dtype=RAW_DTYPE,
+        fill_value=RAW_FILL,
+        dimension_names=dims,
+        compressors=backend.zarr_codecs,
+    )
+    backend.root[name].attrs.update(
+        {
+            **GEOREF,
+            "scale_factor": scale,
+            "add_offset": offset,
+            "_FillValue": RAW_FILL,
+            "units": units,
+            "long_name": long_name,
+        }
+    )
+
+
 def create_schema(backend, model, coords, lead_time: np.ndarray, region) -> None:
     """Allocate the cube in an empty repo, sized for this run's init alone.
 
@@ -669,6 +763,14 @@ def create_schema(backend, model, coords, lead_time: np.ndarray, region) -> None
             shape=[len(values) for values in rgb_coords.values()],
             chunks=[backend.chunks.get(dim, len(values)) for dim, values in rgb_coords.items()],
             dims=list(rgb_coords),
+        )
+    for name in RAW_CHANNELS:
+        add_raw_array(
+            backend,
+            name,
+            shape=[len(values) for values in total_coords.values()],
+            chunks=[backend.chunks.get(dim, len(values)) for dim, values in total_coords.items()],
+            dims=list(total_coords),
         )
     backend.root["rgb"].attrs.update(RGB_BAND_ATTRS)
     latlon_codec = [BloscCodec(cname="zstd", clevel=3, shuffle="shuffle")]
@@ -733,7 +835,7 @@ def create_schema(backend, model, coords, lead_time: np.ndarray, region) -> None
     )
 
 
-TIME_ARRAYS = ("time", "valid_time", *COMPOSITES)
+TIME_ARRAYS = ("time", "valid_time", *COMPOSITES, *RAW_CHANNELS)
 
 
 def extend_schema(backend, time_: np.ndarray, lead_time: np.ndarray, y: np.ndarray) -> None:
@@ -742,7 +844,8 @@ def extend_schema(backend, time_: np.ndarray, lead_time: np.ndarray, y: np.ndarr
     The rollout steps then fill the new `time` slice in the same session, and one
     commit publishes both. An init already in `time` is a rerun: its slice is
     overwritten in place. A composite added to `COMPOSITES` after the repo was created
-    is allocated like `true_color`; its earlier inits stay fill (transparent).
+    is allocated like `true_color`; its earlier inits stay fill (transparent). The same
+    goes for raw channels in a repo created before they were stored.
     """
     ref = backend.root["true_color"]  # every composite shares its shape and chunks
     for name in COMPOSITES:
@@ -751,6 +854,13 @@ def extend_schema(backend, time_: np.ndarray, lead_time: np.ndarray, y: np.ndarr
         if backend.root[name].dtype != RGB_DTYPE:
             raise ValueError(f"repo has no {RGB_DTYPE} {name}; publish to an empty repo or branch")
         backend.root[name].attrs.update(COMPOSITE_ATTRS[name])  # recipe changes reach old repos
+    for name in RAW_CHANNELS:  # (ensemble, time, lead_time, y, x): the composites minus `rgb`
+        if name not in backend.root:
+            add_raw_array(
+                backend, name, ref.shape[:-1], ref.chunks[:-1], ref.metadata.dimension_names[:-1]
+            )
+        if backend.root[name].dtype != RAW_DTYPE:
+            raise ValueError(f"repo has no {RAW_DTYPE} {name}; publish to an empty repo or branch")
     stored_lead = backend.root["lead_time"][:]
     if not np.array_equal(stored_lead, lead_time):
         raise ValueError(
@@ -828,7 +938,8 @@ class StormScopeUSPipeline:
             tqdm(self.model.create_iterator(x, coords), total=n_steps + 1)
         ):
             # Non-blocking: the backend's thread pool uploads while the GPU computes.
-            backend.write(*step_composites(self.model, x_pred, coords_pred, channels))
+            for batch in step_outputs(self.model, x_pred, coords_pred, channels):
+                backend.write(*batch)
             now = time.monotonic()
             step_times.append(now - t_step)
             t_step = now

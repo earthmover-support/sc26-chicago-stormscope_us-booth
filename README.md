@@ -169,16 +169,16 @@ uv run python scripts/stormscope_us_pipeline.py --publish-target arraylake
 | `--arraylake-repo` | `$ARRAYLAKE_REPO` or `nvidia/sc26-chicago-stormscope_us-booth` | required with `arraylake`, which also needs `ARRAYLAKE_API_TOKEN` |
 | `--device` | `auto` | `auto`, `cuda` or `cpu` |
 
-The script stores two RGB composites, not the 8 raw channels. Both have the shape
-`(ensemble, time, lead_time, y, x, rgb)` and are uint8 in 0–255 on the HRRR Lambert
-conformal grid:
+The script stores two RGB composites and the 8 channels the model predicts. All are on
+the HRRR Lambert conformal grid:
 
 - 1024 × 1792 at 3 km for CONUS.
 - `x` and `y` in meters, with the CF grid mapping `hrrr_lambert_conformal`.
 - 2-D `lat` and `lon`, each one chunk.
 - `ensemble` is int8, numbered from 1.
 
-The script computes each composite in 0–1 and stores it as `round(x * 255)`, clipped to
+The composites have the shape `(ensemble, time, lead_time, y, x, rgb)` and are uint8 in
+0–255. The script computes each composite in 0–1 and stores it as `round(x * 255)`, clipped to
 1–255. A missing pixel is 0, the Zarr `fill_value`. A pixel is missing when it is outside
 the GOES view or the region, or when its step is not written yet. There is no CF
 `_FillValue`.
@@ -197,5 +197,20 @@ the GOES view or the region, or when its step is not written yet. There is no CF
   - R = C13, 278.96 → 202.29 K: cloud height.
   - G = C08 (6.19 µm), 242.67 → 214.66 K: upper-level moisture.
   - B = C10 (7.34 µm), 261.03 → 245.12 K: low-to-mid moisture.
+
+The raw channels `abi01c`, `abi02c`, `abi03c`, `abi07c`, `abi08c`, `abi09c`, `abi10c` and
+`abi13c` have the shape `(ensemble, time, lead_time, y, x)`. They are stored as NOAA
+stores them in the GOES-19 MCMIPC files:
+
+- int16 counts with NOAA's `scale_factor` and `add_offset` for each band. C01–C03 are
+  reflectance factors with a step of 0.0003. C07–C13 are brightness temperatures in K
+  with a step of 0.01–0.06 K.
+- Counts are clipped to NOAA's valid range, 0–4095 (C07: 0–16383).
+- A missing pixel is -1, both the Zarr `fill_value` and the CF `_FillValue`.
+
+The model only sees NOAA's precision, so float32 output would add bytes and no
+information. `xr.open_zarr` decodes the counts to float64 with NaN; `.astype("float32")`
+loses nothing. Repos created before the raw channels existed get the arrays on the next
+run. Their earlier inits read as NaN.
 
   NOAA's Air Mass RGB needs C12 (9.6 µm), which StormScope-US does not predict.
