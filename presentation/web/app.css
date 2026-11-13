@@ -279,13 +279,12 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 
 /* ---------------- strip ---------------- */
 .strip { position: relative; display: flex; align-items: center; gap: 24px; padding: 0 24px; background: #111317; border: 1px solid var(--line); border-radius: 0; }
-/* triangle in the strip's top-right corner: points down to collapse, up to expand */
-.strip-toggle { position: absolute; top: 6px; right: 10px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+/* triangle left of the corner QR: points down to collapse, up to expand */
+.strip-toggle { flex-shrink: 0; margin-left: auto; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
 .strip-toggle:hover { color: var(--text); }
 .strip-toggle svg { transition: transform .2s; }
 /* collapsed: a thin bar with the countdown only; the globe and panels take the room */
 .app.strip-collapsed { grid-template-rows: 56px minmax(0, 1fr) 44px; }
-.app.strip-collapsed .strip-toggle { top: 50%; transform: translateY(-50%); }
 .app.strip-collapsed .strip-toggle svg { transform: rotate(180deg); }
 .app.strip-collapsed .strip .ingest, .app.strip-collapsed .strip .last { display: none; }
 .app.strip-collapsed .strip .next { width: auto; flex-direction: row; align-items: baseline; gap: 12px; }
@@ -295,8 +294,8 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .strip .ingest { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
 .strip .last { width: 230px; display: flex; flex-direction: column; gap: 2px; }
 .strip .last .mono { font-size: 17px; }
-/* always-visible phone-viewer QR, bottom-right; right margin clears the collapse caret */
-.corner-qr { display: flex; align-items: center; gap: 12px; margin: 8px 14px 8px auto; flex-shrink: 0; }
+/* always-visible phone-viewer QR, bottom-right, with the collapse caret just left of it */
+.corner-qr { display: flex; align-items: center; gap: 12px; margin: 8px 0; flex-shrink: 0; }
 .corner-qr span { display: flex; flex-direction: column; gap: 2px; text-align: right; font-size: 12px; color: var(--muted); }
 .corner-qr b { font-size: 14px; color: var(--text); }
 .corner-qr .qrbox { width: 92px; padding: 4px; background: #fff; color: #4E4E4E; }
