@@ -34,6 +34,8 @@ is kept besides its structure.
 ## docs/
 
 - `END2END_NEARREALTIME_PERFORMANCE.md`: latency of each stage from GOES-19 scan to the forecast playing in the browser. Baseline = the Berlin setup migrated to the US; every later change is measured on its own (before/after) and logged there.
+- `GPU.md`: GPU instance options in us-east-1 and the Coiled deployment.
+- `BREV.md`: the Brev launchable (setup values -> systemd service running the pipeline).
 
 ## Conventions
 

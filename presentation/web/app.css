@@ -11,6 +11,7 @@
 @font-face { font-family: "NVIDIA Sans"; font-weight: 600 700; font-style: italic; font-display: block; src: url("fonts/NVIDIASans_BdIt.ttf") format("truetype"); }
 
 :root {
+  --noaa-blue: #0085CA; /* NOAA logo blue */
   --ground: #0A0A0C;
   --viz: #05070A;
   --line: #1E232B;
@@ -203,7 +204,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 /* data flow: left bar color = who runs that hop */
 .hops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .hops li { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--nv-card); border-left: 4px solid var(--nv-green); border-radius: 0; position: relative; }
-.hops li.noaa { border-left-color: #8A8F98; }
+.hops li.noaa { border-left-color: var(--noaa-blue); }
 /* licence wait: dashed and dimmed, not part of the architecture */
 .hops li.wait { background: transparent; border: 1px dashed #555; border-left: 4px dashed #8A8F98; }
 .hops li.em { background: var(--em-card); border-left-color: var(--em-lav); }
@@ -214,9 +215,18 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .hops em { font: normal 600 15px var(--mono); color: var(--nv-green); white-space: nowrap; }
 .hops li.noaa em { color: #CFCFCF; } .hops li.em em { color: var(--em-lav); }
 .hops li.wait b, .hops li.wait span, .hops li.wait em { color: #8A8F98; }
-.legend { display: flex; gap: 16px; font: 12px var(--mono); color: #9A9A9A; }
+.legend { display: flex; flex-wrap: nowrap; white-space: nowrap; gap: 16px; font: 12px var(--mono); color: #9A9A9A; }
+/* colocation: every hop marked us-east-1 runs in the same AWS region */
+/* badge column sits 1cm left of the timing column; one badge per title line */
+.hops .regions { align-self: flex-start; display: flex; flex-direction: column; gap: 2px; margin: 1px calc(1cm - 12px) 0 0; }
+.hops em { min-width: 5ch; text-align: right; }
+.hops b { line-height: 19px; }
+.hops div span { white-space: nowrap; }
+.hops small.region, .legend small.region { display: inline-block; padding: 0 6px; line-height: 15px; border: 1px solid #FF9900; color: #FF9900; font: 600 11px var(--mono); letter-spacing: .02em; vertical-align: 2px; white-space: nowrap; }
+.legend .region-key { margin-left: auto; } .legend .region-key small.region { margin: 0 6px 0 0; vertical-align: 0; }
+.legend .region-key::before { content: none; }
 .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 0; vertical-align: -1px; }
-.legend .noaa::before { background: #8A8F98; } .legend .nv::before { background: var(--nv-green); } .legend .em::before { background: var(--em-lav); }
+.legend .noaa::before { background: var(--noaa-blue); } .legend .nv::before { background: var(--nv-green); } .legend .em::before { background: var(--em-lav); }
 
 .commits { display: flex; flex-direction: column; gap: 8px; }
 .commit { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-radius: 0; background: #27263A; }
@@ -269,13 +279,12 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 
 /* ---------------- strip ---------------- */
 .strip { position: relative; display: flex; align-items: center; gap: 24px; padding: 0 24px; background: #111317; border: 1px solid var(--line); border-radius: 0; }
-/* triangle in the strip's top-right corner: points down to collapse, up to expand */
-.strip-toggle { position: absolute; top: 6px; right: 10px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+/* triangle left of the corner QR: points down to collapse, up to expand */
+.strip-toggle { flex-shrink: 0; margin-left: auto; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
 .strip-toggle:hover { color: var(--text); }
 .strip-toggle svg { transition: transform .2s; }
 /* collapsed: a thin bar with the countdown only; the globe and panels take the room */
 .app.strip-collapsed { grid-template-rows: 56px minmax(0, 1fr) 44px; }
-.app.strip-collapsed .strip-toggle { top: 50%; transform: translateY(-50%); }
 .app.strip-collapsed .strip-toggle svg { transform: rotate(180deg); }
 .app.strip-collapsed .strip .ingest, .app.strip-collapsed .strip .last { display: none; }
 .app.strip-collapsed .strip .next { width: auto; flex-direction: row; align-items: baseline; gap: 12px; }
@@ -285,6 +294,12 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .strip .ingest { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
 .strip .last { width: 230px; display: flex; flex-direction: column; gap: 2px; }
 .strip .last .mono { font-size: 17px; }
+/* always-visible phone-viewer QR, bottom-right, with the collapse caret just left of it */
+/* strip inner height 106px: 90px QR leaves the same 8px gap to the strip edge on top, right and bottom */
+.corner-qr { display: flex; align-items: center; gap: 12px; align-self: stretch; margin-right: -16px; flex-shrink: 0; }
+.corner-qr span { display: flex; flex-direction: column; gap: 2px; text-align: right; font-size: 12px; color: var(--muted); }
+.corner-qr b { font-size: 14px; color: var(--text); }
+.corner-qr .qrbox { box-sizing: border-box; width: 90px; padding: 0; background: #fff; color: #4E4E4E; }
 .cells { display: flex; gap: 6px; }
 /* flex-grow is each phase's estimated seconds (set in app.js); a basis of 0 keeps widths proportional */
 .cells div { position: relative; overflow: hidden; flex: 1 1 0; min-width: 0; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 0; font: 12px var(--mono); background: #1A1D23; color: #6B7280; white-space: nowrap; }
@@ -292,7 +307,9 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .cells div span { position: relative; }
 .cells div.past { box-shadow: inset 0 0 0 1px var(--lime); color: var(--lime); }
 .cells div.active { box-shadow: inset 0 0 0 1px var(--lime); color: #E6EAF0; }
-.cells div.commit.active { animation: hold 1.4s ease-in-out infinite; }
+.cells div.download-phase { flex-basis: auto; padding: 0 12px; }
+.cells div.commit-phase { flex: 0 0 auto; padding: 0 6px; }
+.cells div.commit-phase.active { animation: hold 1.4s ease-in-out infinite; }
 @keyframes hold { 50% { box-shadow: inset 0 0 0 1px var(--lime), 0 0 10px rgba(183, 228, 0, .6); } }
 .cells div.done { background: var(--lime); color: var(--lime-ink); font-weight: 600; }
 .cells div.done i { width: 0; transition: none; }

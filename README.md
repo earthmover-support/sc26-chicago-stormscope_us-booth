@@ -32,6 +32,8 @@ GOES-19 files reach S3 about 4.3 min after their slot time and need no credentia
 pipeline therefore runs a few minutes behind real time. It uses no MRMS radar. See
 [Pipeline script](#pipeline-script) and
 [docs/END2END_NEARREALTIME_PERFORMANCE.md](docs/END2END_NEARREALTIME_PERFORMANCE.md).
+To run it on a GPU VM, use Coiled ([docs/GPU.md](docs/GPU.md)) or a Brev launchable
+([docs/BREV.md](docs/BREV.md)).
 
 ## Deployments
 
