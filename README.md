@@ -15,11 +15,11 @@ Arraylake. We stop the deployed pipeline after the event.
   [`presentation/config.json`](presentation/config.json). A browser that already allows
   location access uses its own position instead. See
   ["Here"](presentation/README.md#here) for the rules.
-  - SC26 Chicago (default): https://nvidia-sc26-chicago.earthmover.io/?location=SC26%20Chicago
-  - GTC DC: https://nvidia-sc26-chicago.earthmover.io/?location=GTC%20DC
-  - AGU26 SF: https://nvidia-sc26-chicago.earthmover.io/?location=AGU26%20SF
-  - AMS 2027 Denver: https://nvidia-sc26-chicago.earthmover.io/?location=AMS%202027%20Denver
-  - GTC San Jose: https://nvidia-sc26-chicago.earthmover.io/?location=GTC%20San%20Jose
+  - Chicago (default): https://nvidia-sc26-chicago.earthmover.io/?location=Chicago
+  - Denver: https://nvidia-sc26-chicago.earthmover.io/?location=Denver
+  - New York: https://nvidia-sc26-chicago.earthmover.io/?location=New%20York
+  - Dallas: https://nvidia-sc26-chicago.earthmover.io/?location=Dallas
+  - Los Angeles: https://nvidia-sc26-chicago.earthmover.io/?location=Los%20Angeles
 - Mobile viewer: https://nvidia-sc26-chicago-viewer.earthmover.io/
 
 [`scripts/stormscope_us_pipeline.py`](scripts/stormscope_us_pipeline.py) runs

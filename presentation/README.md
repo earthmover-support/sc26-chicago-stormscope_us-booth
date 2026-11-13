@@ -78,10 +78,10 @@ The page takes "here" from the first of these that applies:
    is inside `data_bounds`. The page never asks for permission. The marker then reads only
    "you are here". On the hosted page the SQL default stays on the venue: its server
    runs only the venue queries, never a query for a coordinate.
-2. `?location=<name>` in the page URL, for example `?location=GTC%20DC`. Use it to run one
+2. `?location=<name>` in the page URL, for example `?location=Denver`. Use it to run one
    screen at another venue without a config edit. The camera shifts so that the venue
    stays on screen. The root README [lists the link for each venue](../README.md#links).
-3. `location` in `config.json`, which is `"SC26 Chicago"`.
+3. `location` in `config.json`, which is `"Chicago"`.
 
 Options 2 and 3 name an entry in `sql.places`, the venue chips on slide 8. Add a new venue
 there first.
@@ -110,9 +110,9 @@ there first.
    as disabled. The service scales to zero, so run one query before visitors arrive.
 
    Panel 08 is a live editor. Click a venue chip (`sql.places`), or type any single
-   `SELECT` or `WITH` statement and press ⌘/Ctrl+Enter. Esc leaves the box. The venue
-   chips are the events in date order: SC26 Chicago, GTC DC, AGU26 San Francisco,
-   AMS 2027 Denver, GTC San Jose. A chip fills the editor and runs the query at once.
+   `SELECT` or `WITH` statement and press ⌘/Ctrl+Enter. Esc leaves the box. The
+   chips are cities: Chicago, Denver, New York, Dallas, Los Angeles. A chip fills the
+   editor and runs the query at once.
    Reset only fills the editor.
 
    The server runs the query with the token. The browser never sees the token. For each
