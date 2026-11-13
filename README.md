@@ -55,8 +55,16 @@ To run it on a GPU VM, use Coiled ([docs/GPU.md](docs/GPU.md)) or a Brev launcha
 6. About 40 min later, fresh forecasts arrive in your repo. The first start pulls the
    container, installs the dependencies and compiles the model; after that, a new
    forecast follows each new GOES-19 scan. Inspect the data in the Arraylake web app
-   (`https://app.earthmover.io/<org>/<repo>`), and follow progress on the VM with
-   `sudo journalctl -u stormscope-us -f` (see [docs/BREV.md](docs/BREV.md)).
+   (`https://app.earthmover.io/<org>/<repo>`). To follow progress on the VM, use the
+   [Brev CLI](https://docs.nvidia.com/brev/latest/cli/getting-started)
+   (`brev login`, then `brev ls` for the instance name):
+
+   ```bash
+   brev exec <instance> 'sudo journalctl -u stormscope-us -n 50 --no-pager'  # one look
+   brev shell <instance>                                                     # then: sudo journalctl -u stormscope-us -f
+   ```
+
+   See [docs/BREV.md](docs/BREV.md) for more commands.
 
 ## Deployments
 
