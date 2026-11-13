@@ -11,6 +11,7 @@
 @font-face { font-family: "NVIDIA Sans"; font-weight: 600 700; font-style: italic; font-display: block; src: url("fonts/NVIDIASans_BdIt.ttf") format("truetype"); }
 
 :root {
+  --noaa-blue: #0085CA; /* NOAA logo blue */
   --ground: #0A0A0C;
   --viz: #05070A;
   --line: #1E232B;
@@ -203,7 +204,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 /* data flow: left bar color = who runs that hop */
 .hops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .hops li { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--nv-card); border-left: 4px solid var(--nv-green); border-radius: 0; position: relative; }
-.hops li.noaa { border-left-color: #8A8F98; }
+.hops li.noaa { border-left-color: var(--noaa-blue); }
 /* licence wait: dashed and dimmed, not part of the architecture */
 .hops li.wait { background: transparent; border: 1px dashed #555; border-left: 4px dashed #8A8F98; }
 .hops li.em { background: var(--em-card); border-left-color: var(--em-lav); }
@@ -214,9 +215,18 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .hops em { font: normal 600 15px var(--mono); color: var(--nv-green); white-space: nowrap; }
 .hops li.noaa em { color: #CFCFCF; } .hops li.em em { color: var(--em-lav); }
 .hops li.wait b, .hops li.wait span, .hops li.wait em { color: #8A8F98; }
-.legend { display: flex; gap: 16px; font: 12px var(--mono); color: #9A9A9A; }
+.legend { display: flex; flex-wrap: nowrap; white-space: nowrap; gap: 16px; font: 12px var(--mono); color: #9A9A9A; }
+/* colocation: every hop marked us-east-1 runs in the same AWS region */
+/* badge column sits 1cm left of the timing column; one badge per title line */
+.hops .regions { align-self: flex-start; display: flex; flex-direction: column; gap: 2px; margin: 1px calc(1cm - 12px) 0 0; }
+.hops em { min-width: 5ch; text-align: right; }
+.hops b { line-height: 19px; }
+.hops div span { white-space: nowrap; }
+.hops small.region, .legend small.region { display: inline-block; padding: 0 6px; line-height: 15px; border: 1px solid #FF9900; color: #FF9900; font: 600 11px var(--mono); letter-spacing: .02em; vertical-align: 2px; white-space: nowrap; }
+.legend .region-key { margin-left: auto; } .legend .region-key small.region { margin: 0 6px 0 0; vertical-align: 0; }
+.legend .region-key::before { content: none; }
 .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 0; vertical-align: -1px; }
-.legend .noaa::before { background: #8A8F98; } .legend .nv::before { background: var(--nv-green); } .legend .em::before { background: var(--em-lav); }
+.legend .noaa::before { background: var(--noaa-blue); } .legend .nv::before { background: var(--nv-green); } .legend .em::before { background: var(--em-lav); }
 
 .commits { display: flex; flex-direction: column; gap: 8px; }
 .commit { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-radius: 0; background: #27263A; }
@@ -292,7 +302,9 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .cells div span { position: relative; }
 .cells div.past { box-shadow: inset 0 0 0 1px var(--lime); color: var(--lime); }
 .cells div.active { box-shadow: inset 0 0 0 1px var(--lime); color: #E6EAF0; }
-.cells div.commit.active { animation: hold 1.4s ease-in-out infinite; }
+.cells div.download-phase { flex-basis: auto; padding: 0 12px; }
+.cells div.commit-phase { flex: 0 0 auto; padding: 0 6px; }
+.cells div.commit-phase.active { animation: hold 1.4s ease-in-out infinite; }
 @keyframes hold { 50% { box-shadow: inset 0 0 0 1px var(--lime), 0 0 10px rgba(183, 228, 0, .6); } }
 .cells div.done { background: var(--lime); color: var(--lime-ink); font-weight: 600; }
 .cells div.done i { width: 0; transition: none; }

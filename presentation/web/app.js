@@ -664,9 +664,9 @@
     const p = S.cfg.run_phases_s;
     return [
       // +0 is the newest observed frame, part of the initial conditions, not an inference step
-      { label: "+0 · download satellite", busy: "downloading initial conditions (satellite −50…+0 min)", s: p.ic },
+      { label: "download", busy: "downloading initial conditions (satellite −50…+0 min)", s: p.ic, cls: "download-phase" },
       ...S.cfg.leads.slice(1).map((lead) => ({ label: `+${lead}`, busy: `inference +${lead} min`, s: p.step })),
-      { label: "commit", busy: "committing to Arraylake", s: p.commit, cls: "commit" },
+      { label: "commit", busy: "committing to Arraylake", s: p.commit, cls: "commit-phase" },
     ];
   }
 
