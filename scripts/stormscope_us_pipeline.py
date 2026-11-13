@@ -54,6 +54,7 @@ import os
 import re
 import time
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 
 import numpy as np
@@ -78,7 +79,7 @@ HRRR_CRS = pyproj.CRS.from_cf(HRRR_LCC)
 HRRR_LCC["crs_wkt"] = HRRR_CRS.to_wkt()  # for GDAL/rioxarray
 
 # ============================================================================
-# COMPOSITES (pure numpy)
+# COMPOSITES (torch, imported lazily) + true_color geometry (numpy)
 # ============================================================================
 RGB_VALUES = np.array(["red", "green", "blue"])
 # The tiles service takes the `rgb` dim as R, G, B by position and reads only
@@ -115,12 +116,6 @@ GEOMETRY_STRIDE = 8
 _rayleigh = None  # pyspectral corrector, loaded (and its LUT downloaded) on first use
 
 
-def _to_bytes(rgb01: np.ndarray) -> np.ndarray:
-    """0..1 float (NaN = missing) -> uint8 with data in 1..255 and missing as RGB_FILL."""
-    scaled = rgb01 * 255
-    return np.where(np.isnan(scaled), RGB_FILL, np.clip(np.round(scaled), 1, 255)).astype(RGB_DTYPE)
-
-
 def _upsample(coarse: np.ndarray, shape: tuple[int, int], stride: int) -> np.ndarray:
     """Bilinear from the `[::stride, ::stride]` subgrid back to `shape`."""
     from scipy.ndimage import map_coordinates
@@ -132,37 +127,61 @@ def _upsample(coarse: np.ndarray, shape: tuple[int, int], stride: int) -> np.nda
     return map_coordinates(coarse, [yy, xx], order=1, mode="nearest").astype("float32")
 
 
-def sun_sat_geometry(lat, lon, valid_time, stride: int = GEOMETRY_STRIDE):
-    """Sun zenith (deg) and the Rayleigh path reflectance (%) of C01 and C02 at `valid_time`.
+def satellite_angles(lat, lon, stride: int = GEOMETRY_STRIDE) -> tuple[np.ndarray, np.ndarray]:
+    """GOES-East zenith and azimuth (deg) on the `[::stride, ::stride]` subgrid.
 
-    Returned at full resolution, with the Rayleigh terms not yet relaxed over bright
-    cloud (that needs the red band). Satellite angles are those of GOES-East.
+    GOES-East is geostationary, so these do not change with time: computed once per grid.
+    """
+    from pyorbital import orbital
+
+    clat = np.asarray(lat, "float64")[::stride, ::stride]
+    clon = np.asarray(lon, "float64")[::stride, ::stride]
+    # Any time works: satellite and observer rotate with the Earth together.
+    sata, sat_elev = orbital.get_observer_look(
+        GOES_SUBSAT_LON, 0.0, GOES_ALT_KM, datetime(2026, 1, 1), clon, clat, np.zeros_like(clon)
+    )
+    return 90.0 - sat_elev, sata % 360
+
+
+def true_color_fields(
+    lat, lon, valid_time, sat_angles=None, stride: int = GEOMETRY_STRIDE
+) -> np.ndarray:
+    """The per-pixel correction fields `true_color` needs at `valid_time`, (4, y, x) float32.
+
+    They depend only on the grid and the time, not on the data, so `TrueColorGeometry`
+    computes them before the step is predicted. In order:
+
+    0. sun-angle factor times 100 (reflectance 0..1 -> % and satpy `sunz_corrected`)
+    1. terminator fade (satpy `sunz_reduced`)
+    2. Rayleigh path reflectance (%) of C01, not yet relaxed over bright cloud
+    3. the same for C02
+
+    `sat_angles` is `satellite_angles(lat, lon, stride)`; computed here if not given.
     """
     global _rayleigh
-    from pyorbital import astronomy, orbital
+    from pyorbital import astronomy
     from pyspectral.rayleigh import Rayleigh
 
     if _rayleigh is None:
         _rayleigh = Rayleigh(
             "GOES-19", "abi", atmosphere="us-standard", aerosol_type="rayleigh_only"
         )
+    satz, sata = sat_angles if sat_angles is not None else satellite_angles(lat, lon, stride)
     utc = np.datetime64(valid_time, "us").astype(datetime)  # pyorbital wants a naive UTC datetime
     clat = np.asarray(lat, "float64")[::stride, ::stride]
     clon = np.asarray(lon, "float64")[::stride, ::stride]
     sunz = astronomy.sun_zenith_angle(utc, clon, clat)
     suna = np.rad2deg(astronomy.get_alt_az(utc, clon, clat)[1]) % 360
-    sata, sat_elev = orbital.get_observer_look(
-        GOES_SUBSAT_LON, 0.0, GOES_ALT_KM, utc, clon, clat, np.zeros_like(clon)
-    )
-    satz = 90.0 - sat_elev
-    azidiff = np.abs(suna - sata % 360)
+    azidiff = np.abs(suna - sata)
     azidiff = np.where(azidiff > 180, 360 - azidiff, azidiff)
     shape = np.shape(lat)
-    path = {
-        band: _upsample(_rayleigh.get_reflectance(sunz, satz, azidiff, band), shape, stride)
+    path = [
+        _upsample(_rayleigh.get_reflectance(sunz, satz, azidiff, band), shape, stride)
         for band in ("C01", "C02")
-    }
-    return _upsample(sunz, shape, stride), path
+    ]
+    sunz = _upsample(sunz, shape, stride)
+    fields = [_sunz_corrected(100.0, sunz), _sunz_reduced(1.0, sunz), *path]
+    return np.stack(fields).astype("float32")
 
 
 def _sunz_corrected(refl, sunz, limit=88.0, max_sza=95.0):
@@ -182,47 +201,68 @@ def _sunz_reduced(refl, sunz, limit=55.0, max_sza=90.0, strength=1.5):
     return refl * np.where(sunz < limit, 1.0, factor)
 
 
-def true_color(arr: np.ndarray, variables: list[str], lat, lon, valid_time) -> np.ndarray:
+# The composites below are torch, so they run on the GPU next to the rollout and only
+# the bytes go back to the host. torch is imported inside them: this module still
+# imports without it.
+def _to_bytes(rgb01):
+    """0..1 float tensor (NaN = missing) -> uint8 with data in 1..255 and missing as RGB_FILL."""
+    import torch
+
+    scaled = rgb01 * 255
+    return torch.where(scaled.isnan(), RGB_FILL, scaled.round().clamp(1, 255)).to(torch.uint8)
+
+
+def _stretch(x):
+    """`np.interp(x, *TRUE_COLOR_STRETCH)` for a tensor in 0..255; NaN stays NaN."""
+    import torch
+
+    xp, fp = (torch.tensor(v, dtype=x.dtype, device=x.device) for v in TRUE_COLOR_STRETCH)
+    i = torch.bucketize(x.nan_to_num(0.0), xp[1:-1], right=True)  # segment of each value
+    slope = (fp[1:] - fp[:-1]) / (xp[1:] - xp[:-1])
+    return fp[i] + slope[i] * (x - xp[i])
+
+
+def true_color(x, variables: list[str], fields):
     """CIMSS natural true-color RGB from ABI C01/C02/C03 reflectances, corrected, then stretched.
 
     satpy's ABI `true_color` chain plus its FCI terminator fade, in percent reflectance:
     sun-angle correction (all bands), Rayleigh correction (C01, C02; relaxed over bright
     cloud as pyspectral does), fade towards the terminator, synthetic green
     0.45 red + 0.10 veggie (0.86 um) + 0.45 blue (CIMSS), then the EUMETSAT curve
-    `TRUE_COLOR_STRETCH`. Takes a (..., variable, y, x) rollout step valid at
-    `valid_time` on the `lat`/`lon` grid and returns (..., y, x, rgb) uint8 as stored;
-    NaN (outside the GOES view or the region) -> 0.
+    `TRUE_COLOR_STRETCH`. Takes a (..., variable, y, x) float32 tensor of one rollout step
+    and its `true_color_fields` (a tensor on the same device) and returns
+    (..., y, x, rgb) uint8 as stored; NaN (outside the GOES view or the region) -> 0.
     """
-    sunz, path = sun_sat_geometry(lat, lon, valid_time)
-    red, veggie, blue = (
-        _sunz_corrected(arr[..., list(variables).index(ch), :, :] * 100, sunz)
-        for ch in TRUE_COLOR_CHANNELS
-    )
+    import torch
+
+    corr, fade, path_c01, path_c02 = fields
+    red, veggie, blue = (x[..., variables.index(ch), :, :] * corr for ch in TRUE_COLOR_CHANNELS)
     # pyspectral: full correction below 20 % red reflectance, none at 100 % (cloud).
-    relax = np.clip(1 - (red - 20) / 80, 0, 1)
-    red, blue = red - path["C02"] * relax, blue - path["C01"] * relax
-    red, veggie, blue = (_sunz_reduced(b, sunz) for b in (red, veggie, blue))
+    relax = (1 - (red - 20) / 80).clamp(0, 1)
+    red, blue = (red - path_c02 * relax) * fade, (blue - path_c01 * relax) * fade
+    veggie = veggie * fade
     green = 0.45 * red + 0.10 * veggie + 0.45 * blue
-    rgb = np.stack([red, green, blue], axis=-1)
-    rgb = np.interp(np.clip(rgb, 0, 100) * 2.55, *TRUE_COLOR_STRETCH) / 255
-    return _to_bytes(rgb)
+    rgb = torch.stack([red, green, blue], dim=-1)
+    return _to_bytes(_stretch(rgb.clamp(0, 100) * 2.55) / 255)
 
 
-def water_vapor(arr: np.ndarray, variables: list[str], *_geometry) -> np.ndarray:
+def water_vapor(x, variables: list[str], fields=None):
     """CIRA Simple Water Vapor RGB from ABI C13 / C08 / C10, day and night.
 
     Red is cloud height, green upper-level moisture, blue low-to-mid-level moisture.
-    Same (..., variable, y, x) -> (..., y, x, rgb) uint8 contract as `true_color`;
-    the geometry arguments are unused.
+    Same (..., variable, y, x) tensor -> (..., y, x, rgb) uint8 contract as `true_color`;
+    `fields` is unused.
     """
-    rgb = np.stack(
+    import torch
+
+    rgb = torch.stack(
         [
-            (arr[..., list(variables).index(ch), :, :] - warm) / (cold - warm)
+            (x[..., variables.index(ch), :, :] - warm) / (cold - warm)
             for ch, warm, cold in WATER_VAPOR_BANDS
         ],
-        axis=-1,
+        dim=-1,
     )
-    return _to_bytes(np.clip(rgb, 0, 1))
+    return _to_bytes(rgb.clamp(0, 1))
 
 
 COMPOSITES = {"true_color": true_color, "water_vapor": water_vapor}
@@ -580,6 +620,62 @@ def output_grid(model) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     return y, x, lat.astype("float32"), lon.astype("float32")
 
 
+class TrueColorGeometry:
+    """`true_color_fields` per valid time, computed in a background thread ahead of use.
+
+    The fields depend only on the grid and the valid time, both known before a run
+    starts, so they are not computed between rollout steps (where the GPU would wait for
+    them). `prepare` queues the valid times of a run; `get` returns a time's fields as a
+    (4, y, x) float32 tensor on `device`, waiting only if they are not ready yet. The
+    pipeline prepares the next init's valid times after each commit, in the minutes it
+    waits for the next GOES file. Inits run every 5 min with 10-min leads, so an init
+    shares 12 of its 13 valid times with the init 10 min before it; those are computed
+    once. With full CONUS that keeps at most ~40 field sets of 29 MB on `device`.
+    Satellite angles are computed once (GOES-East is geostationary).
+    """
+
+    def __init__(self, lat, lon, device, stride: int = GEOMETRY_STRIDE):
+        self.lat, self.lon, self.device, self.stride = lat, lon, device, stride
+        self.sat_angles = satellite_angles(lat, lon, stride)
+        self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="true-color-geometry")
+        self.futures = {}  # datetime64[s] -> Future of the fields tensor
+        self.waited = 0  # `get` calls that had to wait for the background thread
+
+    def _compute(self, valid_time):
+        fields = true_color_fields(self.lat, self.lon, valid_time, self.sat_angles, self.stride)
+        return torch.from_numpy(fields).to(self.device)
+
+    @staticmethod
+    def _key(valid_time) -> np.datetime64:
+        return np.datetime64(valid_time, "s")
+
+    def prepare(self, valid_times) -> None:
+        """Queue the fields of `valid_times` that are neither ready nor queued."""
+        for t in np.atleast_1d(valid_times):
+            key = self._key(t)
+            if key not in self.futures:
+                self.futures[key] = self.pool.submit(self._compute, key)
+
+    def get(self, valid_time):
+        """The fields at `valid_time`, waiting for (or queueing) them if needed."""
+        key = self._key(valid_time)
+        self.prepare(key)
+        future = self.futures[key]
+        if not future.done():
+            self.waited += 1
+        try:
+            return future.result()
+        except Exception:
+            del self.futures[key]  # recomputed on the next try
+            raise
+
+    def evict_before(self, valid_time) -> None:
+        """Drop the fields of valid times before `valid_time` (they are not used again)."""
+        key = self._key(valid_time)
+        for t in [t for t in self.futures if t < key]:
+            self.futures.pop(t).cancel()
+
+
 class FrameCache:
     """Data source that keeps decoded frames in memory between inits.
 
@@ -679,28 +775,23 @@ def add_grid_mapping(backend, name: str, attrs: dict) -> None:
     backend.root[name].attrs.update(attrs)
 
 
-def step_composites(model, x_pred, coords_pred: OrderedDict, channels: list[str], lat, lon):
+def step_composites(model, x_pred, coords_pred: OrderedDict, channels: list[str], geometry):
     """One rollout step -> the `(tensors, coords, names)` to hand `write`.
 
-    Crops to the requested region (a no-op for full CONUS) and computes both
-    composites on the stored grid `lat`/`lon` (`output_grid`) at the step's valid time.
-    `copy=True` because the generator keeps writing into its own buffers between yields,
-    and the non-blocking store write may still be reading.
+    Crops to the requested region (a no-op for full CONUS) and computes both composites
+    on the model's device, with the `true_color` fields of the step's valid time from
+    `geometry` (a `TrueColorGeometry`). Only the uint8 composites are copied to the host;
+    they are new tensors, so the generator may reuse its own buffers while the
+    non-blocking store write still reads them.
     """
     x_out, coords_out = model.crop_output(x_pred, coords_pred)
-    arr = x_out.detach().to("cpu", torch.float32, copy=True).numpy()
+    x = x_out.detach().to(torch.float32)
     rgb_coords = OrderedDict((d, v) for d, v in coords_out.items() if d != "variable")
     rgb_coords["rgb"] = RGB_VALUES
     (init,), (lead,) = coords_out["time"], coords_out["lead_time"]  # one step at a time
+    fields = geometry.get(init + lead)
     names = list(COMPOSITES)
-    return (
-        [
-            torch.from_numpy(COMPOSITES[name](arr, channels, lat, lon, init + lead))
-            for name in names
-        ],
-        rgb_coords,
-        names,
-    )
+    return [COMPOSITES[name](x, channels, fields).cpu() for name in names], rgb_coords, names
 
 
 def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
@@ -875,9 +966,10 @@ class StormScopeUSPipeline:
             self.device = torch.device(device)
         self.region = region
         self.model = load_model(self.device, region)
-        _, _, self.lat, self.lon = output_grid(self.model)
+        _, _, lat, lon = output_grid(self.model)
+        self.geometry = TrueColorGeometry(lat, lon, self.device)
         # Load pyspectral's Rayleigh tables now (downloaded on first use), not in the first run.
-        sun_sat_geometry(self.lat, self.lon, np.datetime64("2026-11-16T18:00"))
+        self.geometry.get(np.datetime64("2026-06-21T18:00"))  # evicted by the first run
         # Keep each frame until the init 10 min later has reused it (+10 min margin).
         keep = self.n_frames * self.frame_step + timedelta(minutes=10)
         self.goes = FrameCache(GOES(satellite=GOES_SATELLITE, scan_mode=GOES_SCAN_MODE), keep)
@@ -897,6 +989,11 @@ class StormScopeUSPipeline:
         os.makedirs(output_dir, exist_ok=True)
         t0 = time.monotonic()
         hits, misses = self.goes.hits, self.goes.misses
+        waited = self.geometry.waited
+        lead_time = np.arange(n_steps + 1) * self.model.output_times[0]
+        # Normally queued by the previous run already; else computed while the data loads.
+        self.geometry.evict_before(start_time)
+        self.geometry.prepare(start_time + lead_time)
 
         with torch.no_grad():
             x, coords = fetch_initial_condition(self.model, self.goes, start_time, self.device)
@@ -905,7 +1002,6 @@ class StormScopeUSPipeline:
         channels = [str(v) for v in self.model.variables]
 
         backend, location = build_backend(publish_target, output_dir, arraylake_repo)
-        lead_time = np.arange(n_steps + 1) * self.model.output_times[0]
         init = np.datetime_as_string(coords["time"][0], unit="m")
         if "true_color" not in backend.root:
             create_schema(backend, self.model, coords, lead_time, self.region)
@@ -919,7 +1015,7 @@ class StormScopeUSPipeline:
         ):
             # Non-blocking: the backend's thread pool uploads while the GPU computes.
             backend.write(
-                *step_composites(self.model, x_pred, coords_pred, channels, self.lat, self.lon)
+                *step_composites(self.model, x_pred, coords_pred, channels, self.geometry)
             )
             now = time.monotonic()
             step_times.append(now - t_step)
@@ -935,11 +1031,14 @@ class StormScopeUSPipeline:
             rebase_with=icechunk.ConflictDetector(),
         )
         t_total = time.monotonic() - t0
+        # The next init is one slot later: compute its true_color fields while waiting for it.
+        self.geometry.prepare(start_time + np.timedelta64(SLOT_STEP) + lead_time)
         print(f"{message} -> {snapshot}")
         print(
             f"timing: fetch {t_fetch:.1f}s, rollout+write {t_roll:.1f}s, "
             f"commit {t_total - t_fetch - t_roll:.1f}s, total {t_total:.1f}s; "
-            f"frames: {self.goes.hits - hits} from memory, {self.goes.misses - misses} read"
+            f"frames: {self.goes.hits - hits} from memory, {self.goes.misses - misses} read; "
+            f"true_color fields: {self.geometry.waited - waited} of {n_steps + 1} not ready"
         )
         gpu = torch.cuda.get_device_name(self.device) if self.device.type == "cuda" else "cpu"
         print(f"step times ({gpu}): " + ", ".join(f"{t:.2f}s" for t in step_times))

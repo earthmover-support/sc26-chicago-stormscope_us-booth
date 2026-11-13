@@ -235,6 +235,11 @@ the GOES view or the region, or when its step is not written yet. There is no CF
      `[0, 110, 160, 210, 240, 255]`, linear in between.
 
   The angles and the Rayleigh lookup run on every 8th pixel and are interpolated back.
+  They depend only on the grid and the valid time, so they are computed in a background
+  thread before they are needed (`TrueColorGeometry`): after each commit, the pipeline
+  queues the valid times of the next init while it waits for the next GOES file. Steps 1
+  to 4 then run on the GPU in torch, next to the rollout, and only the bytes are copied
+  back. `water_vapor` runs on the GPU as well.
 - `water_vapor`: CIRA Simple Water Vapor RGB, day and night. It uses inverted brightness
   temperatures, linear, gamma 1:
   - R = C13, 278.96 → 202.29 K: cloud height.

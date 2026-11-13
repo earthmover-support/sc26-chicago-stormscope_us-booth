@@ -74,6 +74,15 @@ Candidates, not yet measured:
   native GOES grid 1500 × 2500, ~2× the stored 1024 × 1792 grid) on an Apple M-series laptop
   CPU, LUTs already loaded. Geometry on every 8th pixel vs every pixel: ≤ 1 byte difference
   for 99.9 % of pixels.
+- `true_color` fields + torch composites (stage 5, #19): 4 vCPU cloud VM, no GPU, stored
+  grid 1024 × 1792, pyspectral Rayleigh lookup replaced by a stand-in (its tables were not
+  reachable from that VM). Fields of one valid time, computed in the background: 0.40 s.
+  Per step on the critical path, torch on the CPU with 4 threads: `true_color` 0.083 s,
+  `water_vapor` 0.019 s. On the GPU: see the next
+  item. The run prints `true_color fields: N of 13 not ready` with its timing line;
+  N is 0 when the wait for the next GOES file is longer than computing the new fields.
+  Checked once on that VM against the numpy recipe of #16 (synthetic step, day, terminator
+  and night): within 1 byte, ≥ 99.9 % of pixels identical.
 - #16 vs #19 on the GPU (stage 5): Arraylake commit times of
   `nvidia/sc26-chicago-stormscope_us-booth` minus the init time `T`. #16 on a Brev
   instance, 12 inits 2026-11-12 15:50–16:45: `T`+5:22 … 5:31, median 5:23; the GOES file
