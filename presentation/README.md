@@ -150,7 +150,7 @@ there first.
    - the fonts.
    - the venue SQL results of each run.
 
-   `--offline` replays the saved runs on the demo cadence, one new run every 10 min. The
+   `--offline` replays the saved runs on the demo cadence, one new run every 5 min. The
    header reads REPLAY. The QR codes still point online, so phones use mobile data. As a
    last resort, `record_video.sh` records the live page to an MP4.
 
@@ -162,7 +162,7 @@ ways:
 - **SQL is locked.** `/api/config` answers `sql_editable: false`. The editor is
   read-only, Reset is hidden, and the venue chips pick the query. Run sends
   `GET /api/sql?place=<venue>&init=<newest init>`. The function runs only the
-  `config.json` query for a `sql.places` entry, and only for an init on the 10-minute grid
+  `config.json` query for a `sql.places` entry, and only for an init on the 5-minute grid
   from the last 7 days. It rejects all other requests, including query text and POSTs. The
   CDN keeps each answer for a day.
 - **No pollers.** `/api/state` reads the commits and the `time` coordinate on each

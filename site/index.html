@@ -110,7 +110,8 @@ const HOLD_LAST_MS = 2000; // the last lead stays this much longer than FRAME_MS
 const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
 const LEADS_IN_FLIGHT = 3; // frames loading at once; one at a time waits on each frame's slowest tile
 const POLL_MS = 60000; // how often to look for a new init
-const INITS = 144; // the selector offers the past 24 h, one init every 10 min
+const INITS = 288; // the selector offers the past 24 h, one init every 5 min (each GOES-19 CONUS scan)
+const INIT_STEP_MS = 5 * 60000;
 const VENUE = [41.8517, -87.6167]; // McCormick Place; decides day or night for the starting composite
 
 // Keep tiles across variable switches and reloads; see sw.js.
@@ -200,7 +201,7 @@ async function loadCoords() {
   // ponytail: assumes no init is missing; a gap shows blank frames, list the real times if that bites
   const newest = utc(times.at(-1)).getTime();
   return {
-    times: Array.from({ length: INITS }, (_, k) => new Date(newest - (INITS - 1 - k) * 600000).toISOString().slice(0, 19))
+    times: Array.from({ length: INITS }, (_, k) => new Date(newest - (INITS - 1 - k) * INIT_STEP_MS).toISOString().slice(0, 19))
       .filter((t) => t >= times[0]),
     leads: values(pres.find((s) => s.includes("timedelta64[m]"))).map(Number),
   };
