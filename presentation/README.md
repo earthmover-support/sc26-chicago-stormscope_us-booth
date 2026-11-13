@@ -78,10 +78,10 @@ The page takes "here" from the first of these that applies:
    is inside `data_bounds`. The page never asks for permission. The marker then reads only
    "you are here". On the hosted page the SQL default stays on the venue: its server
    runs only the venue queries, never a query for a coordinate.
-2. `?location=<name>` in the page URL, for example `?location=GTC%20DC`. Use it to run one
+2. `?location=<name>` in the page URL, for example `?location=Denver`. Use it to run one
    screen at another venue without a config edit. The camera shifts so that the venue
    stays on screen. The root README [lists the link for each venue](../README.md#links).
-3. `location` in `config.json`, which is `"SC26 Chicago"`.
+3. `location` in `config.json`, which is `"Chicago"`.
 
 Options 2 and 3 name an entry in `sql.places`, the venue chips on slide 8. Add a new venue
 there first.
@@ -110,9 +110,8 @@ there first.
    as disabled. The service scales to zero, so run one query before visitors arrive.
 
    Panel 08 is a live editor. Click a venue chip (`sql.places`), or type any single
-   `SELECT` or `WITH` statement and press ⌘/Ctrl+Enter. Esc leaves the box. The venue
-   chips are the events in date order: SC26 Chicago, GTC DC, AGU26 San Francisco,
-   AMS 2027 Denver, GTC San Jose. A chip fills the editor and runs the query at once.
+   `SELECT` or `WITH` statement and press ⌘/Ctrl+Enter. Esc leaves the box. The
+   chips are cities: Chicago, Denver, New York, Dallas, Los Angeles. A chip fills the editor and runs the query at once.
    Reset only fills the editor.
 
    The server runs the query with the token. The browser never sees the token. For each
@@ -150,7 +149,7 @@ there first.
    - the fonts.
    - the venue SQL results of each run.
 
-   `--offline` replays the saved runs on the demo cadence, one new run every 10 min. The
+   `--offline` replays the saved runs on the demo cadence, one new run every 5 min. The
    header reads REPLAY. The QR codes still point online, so phones use mobile data. As a
    last resort, `record_video.sh` records the live page to an MP4.
 
@@ -162,7 +161,7 @@ ways:
 - **SQL is locked.** `/api/config` answers `sql_editable: false`. The editor is
   read-only, Reset is hidden, and the venue chips pick the query. Run sends
   `GET /api/sql?place=<venue>&init=<newest init>`. The function runs only the
-  `config.json` query for a `sql.places` entry, and only for an init on the 10-minute grid
+  `config.json` query for a `sql.places` entry, and only for an init on the 5-minute grid
   from the last 7 days. It rejects all other requests, including query text and POSTs. The
   CDN keeps each answer for a day.
 - **No pollers.** `/api/state` reads the commits and the `time` coordinate on each

@@ -1,7 +1,7 @@
 # End-to-end near-real-time performance
 
 How long it takes from GOES-19 scanning the contiguous US to the forecast playing on the
-booth screen, stage by stage. `T` is the nominal 10-minute slot time, which the pipeline
+booth screen, stage by stage. `T` is the nominal 5-minute slot time, which the pipeline
 uses as the forecast init time.
 
 **Method.** The starting point is the GTC Berlin StormScope-EU booth setup migrated to the
@@ -17,7 +17,7 @@ change is known separately. Update the `current` column only from a logged measu
 |---|---|---|---|---|---|
 | 1 | Scan | GOES-19 ABI scans the CONUS sector every 5 min (mode 6). The scan for slot `T` starts at `T`+1:17 and ends at `T`+3:54. | 3.9 min | 3.9 min | instrument; nothing to tune |
 | 2 | On NOAA's S3 bucket | The L2 MCMIPC file (all 16 channels as CMI: reflectance / brightness temperature) is created at `T`+4:06 and listed in `noaa-goes19` at `T`+4:18 (median; p90 `T`+4:27, max `T`+4:37; n=71). | 0.4 min after scan end | 0.4 min | NOAA side. Public, no licence gate (the EU setup waited 48 min here). |
-| 3 | Pickup | The pipeline lists the bucket every `--wait-seconds` (default 5 s) and starts on the newest 10-min slot whose 6 input frames (`T`-50 … `T`) are all listed. | ≤ 15 s | ≤ 5 s | |
+| 3 | Pickup | The pipeline lists the bucket every `--wait-seconds` (default 5 s) and starts on the newest 5-min slot whose 6 input frames (`T`-50 … `T`) are all listed. | ≤ 15 s | ≤ 5 s | |
 | 4 | Download + regrid | `fetch_data` pulls 6 MCMIPC files (only the newest is new per cycle; the others are in the earth2studio cache) and the model regrids them from the GOES fixed grid to the 3 km HRRR grid (nearest neighbour). One new timestamp from us-east-1: raw S3 GET of the 56 MB file 0.57 s (~99 MB/s); Earth2Studio `GOES` list + download + decode of the 8 channels 1.2 s (median, max 1.5 s). Regrid not yet measured. | download 1.2 s; regrid TBD | fetch 1.3 s (`FrameCache`) | |
 | 5 | Inference + ingest | StormScopeGOES Flash rolls forward 12 × 10 min. Each step's `true_color` / `water_vapor` composites upload to Icechunk in the background while the next step runs; one commit after the last step publishes the whole init. The pipeline prints `timing: fetch …, rollout+write …, commit …` per run. Measured on 1x L40S (`g6e.xlarge`, us-east-1, Brev, with #16 and #19): fetch 1.2 s, 12 × 3.2 s rollout+write (inference, composites on the GPU, upload in the background), commit 0.5 s. | 46–56 s | 40.2 s | fetch includes stage 4 |
 | 6 | Visible to tiles service | The tiles service reads Icechunk directly, so a commit is renderable as soon as it lands. | 0 s | | |
@@ -42,9 +42,10 @@ One row per change, measured before and after on the same setup. Link the PR.
 
 Candidates, not yet measured:
 
-- Run every 5 min instead of every 10: CONUS scans every 5 min and the model only needs its
-  inputs 10 min apart, so an init on every 5-min slot halves the wait for the next run
-  (needs `floor_to_slot` on a 5-min grid and the booth's `run_interval_min`).
+- Run every 5 min instead of every 10 (in place: `SLOT_STEP` and the booth's
+  `run_interval_min` are 5 min; the effect is not yet measured): CONUS scans every 5 min
+  and the model only needs its inputs 10 min apart, so an init on every 5-min slot halves
+  the wait for the next run.
 - `--region`: a smaller Flash domain (`set_domain`) for fewer pixels per step.
 - Co-locate GPU, Arraylake bucket and tiles service in us-east-1 (NOAA's bucket is in
   us-east-1 as well).

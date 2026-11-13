@@ -27,7 +27,7 @@
   "attract_reset_s": 180,
   "timezone": "America/Chicago",
 
-  "location": "SC26 Chicago",
+  "location": "Chicago",
   "camera": { "lon": -96.0, "lat": 38.5, "zoom": 3.3, "pitch": 32, "sway_deg": 10, "sway_period_s": 120,
               "cover": [-125, 24, -67, 50], "min_zoom": 2, "max_zoom": 8.5, "idle_reset_s": 30 },
 
@@ -39,11 +39,11 @@
     "max_rows": 200,
     "box_deg": 0.05,
     "places": {
-      "SC26 Chicago":   [41.8517, -87.6167],
-      "GTC DC":         [38.8936, -77.0311],
-      "AGU26 SF":       [37.7842, -122.4016],
-      "AMS 2027 Denver": [39.7427, -104.9963],
-      "GTC San Jose":   [37.3297, -121.8889]
+      "Chicago":     [41.8517, -87.6167],
+      "Denver":      [39.7392, -104.9903],
+      "New York":    [40.7128, -74.0060],
+      "Dallas":      [32.7767, -96.7970],
+      "Los Angeles": [34.0522, -118.2437]
     },
     "query": [
       "SELECT lead_time, AVG(true_color) AS brightness  -- high means cloudy, low means clear or dark",

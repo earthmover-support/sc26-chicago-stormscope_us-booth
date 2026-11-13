@@ -160,7 +160,7 @@ def run_seconds() -> float:
 
 
 def demo_commits(now: dt.datetime) -> tuple[list[dict], list[str]]:
-    """Fake history: a run every 10 min, one commit each, written `run_seconds()` after its start.
+    """Fake history: a run every `run_interval_min` (5), one commit each, written `run_seconds()` after its start.
 
     So the booth strip's estimate (next start = last commit + interval - run length)
     lines up exactly with the demo cadence.
@@ -174,7 +174,7 @@ def demo_commits(now: dt.datetime) -> tuple[list[dict], list[str]]:
     last = all_leads()[-1]
     for k in range(CONFIG["max_runs"]):
         start = base - dt.timedelta(minutes=interval * k)
-        init = start - dt.timedelta(minutes=90)  # ~80-90 min licence lag
+        init = start - dt.timedelta(minutes=90)  # placeholder lag kept from the EU booth; the real US lag is ~5 min
         t = start + dt.timedelta(seconds=run_seconds())
         if t > now:
             continue
@@ -465,7 +465,7 @@ def newest_init() -> str | None:
 
 
 def poll_sql(stop: threading.Event) -> None:
-    """Run the default (first place) query once per new init, and otherwise only on Run (panel 07).
+    """Run the default (first place) query once per new init, and otherwise only on Run (panel 08).
 
     Each new init resets the editor to the default query, so the booth screen returns to
     the first place. Results are cached per (init, query text): pressing Run again before the next

@@ -15,17 +15,17 @@ Arraylake. We stop the deployed pipeline after the event.
   [`presentation/config.json`](presentation/config.json). A browser that already allows
   location access uses its own position instead. See
   ["Here"](presentation/README.md#here) for the rules.
-  - SC26 Chicago (default): https://nvidia-sc26-chicago.earthmover.io/?location=SC26%20Chicago
-  - GTC DC: https://nvidia-sc26-chicago.earthmover.io/?location=GTC%20DC
-  - AGU26 SF: https://nvidia-sc26-chicago.earthmover.io/?location=AGU26%20SF
-  - AMS 2027 Denver: https://nvidia-sc26-chicago.earthmover.io/?location=AMS%202027%20Denver
-  - GTC San Jose: https://nvidia-sc26-chicago.earthmover.io/?location=GTC%20San%20Jose
+  - Chicago (default): https://nvidia-sc26-chicago.earthmover.io/?location=Chicago
+  - Denver: https://nvidia-sc26-chicago.earthmover.io/?location=Denver
+  - New York: https://nvidia-sc26-chicago.earthmover.io/?location=New%20York
+  - Dallas: https://nvidia-sc26-chicago.earthmover.io/?location=Dallas
+  - Los Angeles: https://nvidia-sc26-chicago.earthmover.io/?location=Los%20Angeles
 - Mobile viewer: https://nvidia-sc26-chicago-viewer.earthmover.io/
 
 [`scripts/stormscope_us_pipeline.py`](scripts/stormscope_us_pipeline.py) runs
 `StormScopeGOES` (`3km_10min_flash`, earth2studio 0.20.0) end to end:
 
-1. Find the newest 10-minute slot `T` whose six input frames, `T`-50 to `T`, are on NOAA's
+1. Find the newest 5-minute slot `T` (an init every 5 min, one per CONUS scan) whose six input frames, `T`-50 to `T`, are on NOAA's
    public `noaa-goes19` bucket.
 2. Roll the model forward in 10-minute steps on the 3 km HRRR grid.
 3. Write each step to Icechunk on Arraylake as soon as the model produces it.
@@ -195,7 +195,7 @@ uv run python scripts/stormscope_us_pipeline.py --publish-target arraylake
 
 | Flag | Default | Notes |
 |---|---|---|
-| `--start-time` | freshest slot with all 6 input frames listed | ISO 8601 UTC on a 10-min boundary. If the script cannot list the bucket, it uses 30 min before now. |
+| `--start-time` | freshest slot with all 6 input frames listed | ISO 8601 UTC on a 5-min boundary. If the script cannot list the bucket, it uses 30 min before now. |
 | `--min-lag` | `0` | minutes that must pass after a slot time before the script considers that slot |
 | `--wait-seconds` | `5` | sleep before the next look when there is no new init or a pass failed |
 | `--n-steps` | `12` | 10-min steps |
