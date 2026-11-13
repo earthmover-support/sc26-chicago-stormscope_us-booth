@@ -37,7 +37,7 @@ pipeline therefore runs a few minutes behind real time. It uses no MRMS radar. S
 To run it on a GPU VM, use Coiled ([docs/GPU.md](docs/GPU.md)) or a Brev launchable
 ([docs/BREV.md](docs/BREV.md)).
 
-## Get real-time forecasts in your Arraylake bucket deploying on Brev in 40 min
+## Get real-time forecasts in your Arraylake bucket deploying on Brev in under 30 min
 
 1. Get the Earthmover **Community** tier: https://docs.earthmover.io/pricing
 2. Create an Arraylake org and an empty repo, either in
@@ -52,7 +52,7 @@ To run it on a GPU VM, use Coiled ([docs/GPU.md](docs/GPU.md)) or a Brev launcha
 5. Start the launchable with the **Launch on Brev** button at the top of this README.
    Set `ARRAYLAKE_API_TOKEN` and `ARRAYLAKE_REPO` (`<org>/<repo>`); the other setup
    values can keep their defaults.
-6. About 40 min later, fresh forecasts arrive in your repo. The first start pulls the
+6. Less than 30 min later, fresh forecasts arrive in your repo. The first start pulls the
    container, installs the dependencies and compiles the model; after that, a new
    forecast follows each new GOES-19 scan. Inspect the data in the Arraylake web app
    (`https://app.earthmover.io/<org>/<repo>`). To follow progress on the VM, use the
