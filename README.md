@@ -66,7 +66,7 @@ To run it on a GPU VM, use Coiled ([docs/GPU.md](docs/GPU.md)) or a Brev launcha
 
    See [docs/BREV.md](docs/BREV.md) for more commands.
 
-## Deployments
+## Frontend Deployments
 
 | | Runs as | Live SQL | Audience | URL |
 |---|---|---|---|---|
