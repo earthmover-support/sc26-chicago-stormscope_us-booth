@@ -4,7 +4,7 @@
 // here. The function always runs in iad1, so the Runtime Cache is one copy shared by every
 // region and hostname. Concurrent misses on one instance share a single tiles-service request.
 // Only successful responses are cached: a 504 from a busy service must not stick.
-// Tiles of a listed init never change; the init list (`_meta`) changes every 5 min.
+// Tiles of a listed init never change; the init list (`_meta`) changes every 10 min.
 // Clear a rerun with `vercel cache invalidate --tag init-<YYYYMMDDHHMM>` (or `tiles`).
 import { getCache } from "@vercel/functions";
 

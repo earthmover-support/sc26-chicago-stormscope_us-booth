@@ -25,7 +25,7 @@ Arraylake. We stop the deployed pipeline after the event.
 [`scripts/stormscope_us_pipeline.py`](scripts/stormscope_us_pipeline.py) runs
 `StormScopeGOES` (`3km_10min_flash`, earth2studio 0.20.0) end to end:
 
-1. Find the newest 5-minute slot `T` (an init every 5 min, one per CONUS scan) whose six input frames, `T`-50 to `T`, are on NOAA's
+1. Find the newest 10-minute slot `T` whose six input frames, `T`-50 to `T`, are on NOAA's
    public `noaa-goes19` bucket.
 2. Roll the model forward in 10-minute steps on the 3 km HRRR grid.
 3. Write each step to Icechunk on Arraylake as soon as the model produces it.
@@ -195,7 +195,7 @@ uv run python scripts/stormscope_us_pipeline.py --publish-target arraylake
 
 | Flag | Default | Notes |
 |---|---|---|
-| `--start-time` | freshest slot with all 6 input frames listed | ISO 8601 UTC on a 5-min boundary. If the script cannot list the bucket, it uses 30 min before now. |
+| `--start-time` | freshest slot with all 6 input frames listed | ISO 8601 UTC on a 10-min boundary. If the script cannot list the bucket, it uses 30 min before now. |
 | `--min-lag` | `0` | minutes that must pass after a slot time before the script considers that slot |
 | `--wait-seconds` | `5` | sleep before the next look when there is no new init or a pass failed |
 | `--n-steps` | `12` | 10-min steps |

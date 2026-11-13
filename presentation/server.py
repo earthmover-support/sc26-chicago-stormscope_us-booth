@@ -160,7 +160,7 @@ def run_seconds() -> float:
 
 
 def demo_commits(now: dt.datetime) -> tuple[list[dict], list[str]]:
-    """Fake history: a run every `run_interval_min` (5), one commit each, written `run_seconds()` after its start.
+    """Fake history: a run every 10 min, one commit each, written `run_seconds()` after its start.
 
     So the booth strip's estimate (next start = last commit + interval - run length)
     lines up exactly with the demo cadence.

@@ -2,8 +2,8 @@
 # Record the live booth page to an MP4, the offline fallback for a booth without internet.
 #
 # Starts server.py live, opens it fullscreen in Chrome on the external 1080p monitor,
-# screen-grabs that monitor with ffmpeg, then re-encodes small. Default 20 min = four
-# 5-min forecast runs. Leave the Mac alone while it records (Do Not Disturb on).
+# screen-grabs that monitor with ffmpeg, then re-encodes small. Default 20 min = two
+# 10-min forecast runs. Leave the Mac alone while it records (Do Not Disturb on).
 #
 #   brew install ffmpeg      # once; also allow Screen Recording for your terminal app
 #   presentation/record_video.sh [out.mp4]
