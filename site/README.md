@@ -7,7 +7,7 @@ phones. The tiles come from branch `main` of the
 
 The page has these controls and behaviours:
 
-- An init selector.
+- An init selector with every init (one per 5 min GOES-19 scan) from the past 24 h.
 - A true color / water vapor toggle. The page starts on water vapor while it is dark at
   the SC26 venue (see [Render parameters](../README.md#render-parameters) for why).
 - Playback over lead times. Playback holds the first frame until all leads have loaded.
