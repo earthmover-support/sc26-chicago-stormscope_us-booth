@@ -857,15 +857,15 @@
   // Level H leaves room for the logo; the viewer QR borrows the tile QR's version so both
   // codes have the same grid.
   const qrCache = {};
-  function setQR(id, text, type = 0) {
+  function setQR(id, text, type = 0, margin = 2) {
     const box = document.getElementById(id);
     if (!text) { if (qrCache[id]?.key !== "") { box.textContent = "[QR]"; qrCache[id] = { key: "", type: 0 }; } return 0; }
-    const key = `${type} ${text}`;
+    const key = `${type} ${margin} ${text}`;
     if (qrCache[id]?.key === key) return qrCache[id].type;
     const qr = qrcode(type, "H");
     qr.addData(text);
     qr.make();
-    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) +
+    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin, scalable: true }) +
       '<img src="img/earthmover-mark.svg" alt="">';
     qrCache[id] = { key, type: (qr.getModuleCount() - 17) / 4 };
     return qrCache[id].type;
@@ -882,7 +882,7 @@
       type = setQR("qrTiles", new URL(url, location.href).href); // hosted tile_base is relative
     }
     setQR("qrViewer", c.viewer_url, type);
-    setQR("qrViewerCorner", c.viewer_url, type); // always-on copy in the strip
+    setQR("qrViewerCorner", c.viewer_url, type, 16); // always-on copy in the strip; white border (4-module quiet zone, SVG units) lives in the SVG so it scales evenly
   }
 
   // ------------------------------------------------------------------ SQL
