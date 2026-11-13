@@ -19,7 +19,7 @@ change is known separately. Update the `current` column only from a logged measu
 | 2 | On NOAA's S3 bucket | The L2 MCMIPC file (all 16 channels as CMI: reflectance / brightness temperature) is created at `T`+4:06 and listed in `noaa-goes19` at `T`+4:18 (median; p90 `T`+4:27, max `T`+4:37; n=71). | 0.4 min after scan end | 0.4 min | NOAA side. Public, no licence gate (the EU setup waited 48 min here). |
 | 3 | Pickup | The pipeline lists the bucket every `--wait-seconds` (default 5 s) and starts on the newest 10-min slot whose 6 input frames (`T`-50 … `T`) are all listed. | ≤ 15 s | ≤ 5 s | |
 | 4 | Download + regrid | `fetch_data` pulls 6 MCMIPC files (only the newest is new per cycle; the others are in the earth2studio cache) and the model regrids them from the GOES fixed grid to the 3 km HRRR grid (nearest neighbour). One new timestamp from us-east-1: raw S3 GET of the 56 MB file 0.57 s (~99 MB/s); Earth2Studio `GOES` list + download + decode of the 8 channels 1.2 s (median, max 1.5 s). Regrid not yet measured. | download 1.2 s; regrid TBD | fetch 1.3 s (`FrameCache`) | |
-| 5 | Inference + ingest | StormScopeGOES Flash rolls forward 12 × 10 min. Each step's `true_color` / `water_vapor` composites upload to Icechunk in the background while the next step runs; one commit after the last step publishes the whole init. The pipeline prints `timing: fetch …, rollout+write …, commit …` per run. Measured on 1x L40S (`g6e.xlarge`, us-east-1): fetch ~6 s, 12 × ~4 s rollout+write, commit ~1 s. | 46–56 s | 41.7 s | fetch includes stage 4 |
+| 5 | Inference + ingest | StormScopeGOES Flash rolls forward 12 × 10 min. Each step's `true_color` / `water_vapor` composites upload to Icechunk in the background while the next step runs; one commit after the last step publishes the whole init. The pipeline prints `timing: fetch …, rollout+write …, commit …` per run. Measured on 1x L40S (`g6e.xlarge`, us-east-1, Brev, with #16 and #19): fetch 1.2 s, 12 × 3.2 s rollout+write (inference, composites on the GPU, upload in the background), commit 0.5 s. | 46–56 s | 40.2 s | fetch includes stage 4 |
 | 6 | Visible to tiles service | The tiles service reads Icechunk directly, so a commit is renderable as soon as it lands. | 0 s | | |
 | 7 | Discovered by client | Booth page: `server.py` polls Arraylake every 5 s, the browser polls `/api/state` every 4 s. Phone viewer: re-reads the init list every 60 s. | ≤ 9 s (phone ≤ 60 s) | | |
 | 8 | First frame rendered | Tiles service renders the home-view tiles of lead 0. | TBD | | depends on the `nvidia` tiles service region and replicas |
@@ -37,7 +37,8 @@ One row per change, measured before and after on the same setup. Link the PR.
 | 2026-11-09 | baseline: Berlin setup migrated to US | all | – | see Stages | c226415, 25a10ee, 4e19d47 |
 | 2026-11-10 | keep decoded GOES frames in memory between inits (`FrameCache`); only the newest file is read | 4, 5 | fetch 4.1 s (1 new + 5 cached files decoded again) | fetch 1.3 s (1 new + 5 from memory) | [#1](https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth/pull/1) |
 | 2026-11-10 | bucket listing every 5 s instead of 15 s (`--wait-seconds` default) | 3 | ≤ 15 s wait after the last input file is listed | ≤ 5 s | [#5](https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth/pull/5) |
-| 2026-11-12 | `true_color` sun-angle + Rayleigh correction before the stretch (look, not speed); geometry on every 8th pixel | 5 | `true_color` 0.12 s per frame | 0.58 s per frame (0.75 s more at full-res geometry); not yet measured on the L40S node | [#16](https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth/pull/16) |
+| 2026-11-12 | `true_color` sun-angle + Rayleigh correction before the stretch (look, not speed); geometry on every 8th pixel | 5 | `true_color` 0.12 s per frame; run 41.7 s | 0.58 s per frame (0.75 s more at full-res geometry); run about 60 s, commit at `T`+5:23 (median, from commit times) | [#16](https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth/pull/16) |
+| 2026-11-13 | `true_color` correction fields computed ahead of use in a background thread, composites in torch on the GPU (`TrueColorGeometry`) | 5 | run about 60 s, commit at `T`+5:23 (#16) | run 40.2 s (fetch 1.2 s, rollout+write 38.5 s, commit 0.5 s; 3.15–3.18 s per step); commit at `T`+5:02; `true_color fields: 0 of 13 not ready` | [#19](https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth/pull/19), [#21](https://github.com/earthmover-support/sc26-chicago-stormscope_us-booth/pull/21) |
 
 Candidates, not yet measured:
 
@@ -73,3 +74,12 @@ Candidates, not yet measured:
   native GOES grid 1500 × 2500, ~2× the stored 1024 × 1792 grid) on an Apple M-series laptop
   CPU, LUTs already loaded. Geometry on every 8th pixel vs every pixel: ≤ 1 byte difference
   for 99.9 % of pixels.
+- #16 vs #19 on the GPU (stage 5): Arraylake commit times of
+  `nvidia/sc26-chicago-stormscope_us-booth` minus the init time `T`. #16 on a Brev
+  instance, 12 inits 2026-11-12 15:50–16:45: `T`+5:22 … 5:31, median 5:23; the GOES file
+  is listed at about `T`+4:18 (stage 2), which leaves about 60 s for the run. #19 (branch of
+  #21) on Brev `g6e.xlarge` (L40S, us-east-1, driver 595.112.07), 2026-11-13, init 09:15,
+  the first one with 5 frames from memory: `timing: fetch 1.2s, rollout+write 38.5s,
+  commit 0.5s, total 40.2s`, commit at `T`+5:02. The first run after a start compiles the
+  model (one step 18 s, total 61.4 s); the second reads all 6 files (fetch 6.1 s, total
+  45.2 s).
