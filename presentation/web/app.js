@@ -4,7 +4,7 @@
  *   /api/config  -> static settings (config.json)
  *   /api/state   -> recent Icechunk commits grouped into runs (polled every 4 s)
  *   /api/sql     -> latest Zax-SQL result (polled every 10 s, 1 s while a query runs)
- *                   POST {query} runs what is in the panel 08 editor; chips and
+ *                   POST {query} runs what is in the panel 06 editor; chips and
  *                   ⌘/Ctrl+Enter send it (there is no Run button)
  *                   (the server also runs the first place's query once for each new init)
  *                   Hosted page (`sql_editable: false`): the editor is read-only and Run
@@ -519,7 +519,7 @@
       img.src = src;
     }
     $("#compositeCaption").textContent = run
-      ? `Observed +0 · ${hhmm(run.init)} ${tzName(initDate(run.init))}`
+      ? `Observed +0 · ${hhmm(run.init)} ${tzName(initDate(run.init))} · CONUS`
       : "Observed +0 Frame · Waiting for Data";
   }
 

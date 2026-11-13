@@ -174,7 +174,7 @@ def demo_commits(now: dt.datetime) -> tuple[list[dict], list[str]]:
     last = all_leads()[-1]
     for k in range(CONFIG["max_runs"]):
         start = base - dt.timedelta(minutes=interval * k)
-        init = start - dt.timedelta(minutes=90)  # placeholder lag kept from the EU booth; the real US lag is ~5 min
+        init = start - dt.timedelta(minutes=90)  # ~80-90 min licence lag
         t = start + dt.timedelta(seconds=run_seconds())
         if t > now:
             continue
@@ -465,7 +465,7 @@ def newest_init() -> str | None:
 
 
 def poll_sql(stop: threading.Event) -> None:
-    """Run the default (first place) query once per new init, and otherwise only on Run (panel 08).
+    """Run the default (first place) query once per new init, and otherwise only on Run (panel 07).
 
     Each new init resets the editor to the default query, so the booth screen returns to
     the first place. Results are cached per (init, query text): pressing Run again before the next

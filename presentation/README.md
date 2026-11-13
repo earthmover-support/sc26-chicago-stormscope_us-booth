@@ -111,7 +111,8 @@ there first.
 
    Panel 08 is a live editor. Click a venue chip (`sql.places`), or type any single
    `SELECT` or `WITH` statement and press ⌘/Ctrl+Enter. Esc leaves the box. The
-   chips are cities: Chicago, Denver, New York, Dallas, Los Angeles. A chip fills the editor and runs the query at once.
+   chips are cities: Chicago, Denver, New York, Dallas, Los Angeles. A chip fills the
+   editor and runs the query at once.
    Reset only fills the editor.
 
    The server runs the query with the token. The browser never sees the token. For each

@@ -52,7 +52,7 @@ Then open http://localhost:8765. The tiles service must be up and public (see
 
 ## Hosting
 
-Vercel deploys the site from `main` with root directory `site`, framework preset "Other".
-`vercel.json` sets the build command (`npm run build`) and an ignored build step, so Vercel skips commits that
+Vercel deploys the site from `main` with root directory `site`, framework preset "Other"
+and no build command. `vercel.json` sets an ignored build step, so Vercel skips commits that
 change nothing under `site/`. The tiles service sends `Access-Control-Allow-Origin: *`, so
 the page works from any domain.
