@@ -882,6 +882,7 @@
       type = setQR("qrTiles", new URL(url, location.href).href); // hosted tile_base is relative
     }
     setQR("qrViewer", c.viewer_url, type);
+    setQR("qrViewerCorner", c.viewer_url, type); // always-on copy in the strip
   }
 
   // ------------------------------------------------------------------ SQL
