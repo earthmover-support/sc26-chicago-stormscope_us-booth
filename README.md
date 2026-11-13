@@ -1,5 +1,7 @@
 # sc26-chicago-stormscope_us-booth
 
+[![Launch on Brev](https://brev-assets.s3.us-west-1.amazonaws.com/nv-lb-dark.svg)](https://brev.nvidia.com/launchable/deploy?launchableID=env-3M2pAl81MVfkO3sQbiqFQjKLiQ4)
+
 The booth demo for SC26 Chicago, McCormick Place, 15 to 20 November 2026. It runs
 StormScope-US nowcasts on GOES-19 ABI data over the contiguous US and streams them into
 Arraylake. We stop the deployed pipeline after the event.
@@ -34,6 +36,35 @@ pipeline therefore runs a few minutes behind real time. It uses no MRMS radar. S
 [docs/END2END_NEARREALTIME_PERFORMANCE.md](docs/END2END_NEARREALTIME_PERFORMANCE.md).
 To run it on a GPU VM, use Coiled ([docs/GPU.md](docs/GPU.md)) or a Brev launchable
 ([docs/BREV.md](docs/BREV.md)).
+
+## Get real-time forecasts in your Arraylake bucket deploying on Brev in under 30 min
+
+1. Get the Earthmover **Community** tier: https://docs.earthmover.io/pricing
+2. Create an Arraylake org and an empty repo, either in
+   [your own bucket](https://docs.earthmover.io/setup/manage-storage#bring-your-own-bucket)
+   or in
+   [Earthmover-managed storage](https://docs.earthmover.io/setup/manage-storage#earthmover-managed-storage).
+   The pipeline writes the schema on its first run.
+3. Create an `ARRAYLAKE_API_TOKEN` with write access to that repo:
+   https://docs.earthmover.io/setup/org-access#creating-and-managing-api-keys
+4. Get a [Brev](https://brev.nvidia.com) account. Launching an instance requires credit
+   card details.
+5. Start the launchable with the **Launch on Brev** button at the top of this README.
+   Set `ARRAYLAKE_API_TOKEN` and `ARRAYLAKE_REPO` (`<org>/<repo>`); the other setup
+   values can keep their defaults.
+6. Less than 30 min later, fresh forecasts arrive in your repo. The first start pulls the
+   container, installs the dependencies and compiles the model; after that, a new
+   forecast follows each new GOES-19 scan. Inspect the data in the Arraylake web app
+   (`https://app.earthmover.io/<org>/<repo>`). To follow progress on the VM, use the
+   [Brev CLI](https://docs.nvidia.com/brev/latest/cli/getting-started)
+   (`brev login`, then `brev ls` for the instance name):
+
+   ```bash
+   brev exec <instance> 'sudo journalctl -u stormscope-us -n 50 --no-pager'  # one look
+   brev shell <instance>                                                     # then: sudo journalctl -u stormscope-us -f
+   ```
+
+   See [docs/BREV.md](docs/BREV.md) for more commands.
 
 ## Deployments
 
