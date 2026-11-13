@@ -1,6 +1,6 @@
 # sc26-chicago-stormscope_us-booth
 
-[![Launch on Brev](https://brev-assets.s3.us-west-1.amazonaws.com/nv-lb-dark.svg)](https://brev.nvidia.com/launchable/deploy?launchableID=TODO-launchable-id)
+[![Launch on Brev](https://brev-assets.s3.us-west-1.amazonaws.com/nv-lb-dark.svg)](https://brev.nvidia.com/launchable/deploy?launchableID=env-3M2pAl81MVfkO3sQbiqFQjKLiQ4)
 
 The booth demo for SC26 Chicago, McCormick Place, 15 to 20 November 2026. It runs
 StormScope-US nowcasts on GOES-19 ABI data over the contiguous US and streams them into
