@@ -50,7 +50,9 @@ To run it on a GPU VM, use Coiled ([docs/GPU.md](docs/GPU.md)) or a Brev launcha
 4. Get a [Brev](https://brev.nvidia.com) account. Launching an instance requires credit
    card details.
 5. Start the launchable:
+
    [![Launch on Brev](https://brev-assets.s3.us-west-1.amazonaws.com/nv-lb-dark.svg)](https://brev.nvidia.com/launchable/deploy?launchableID=env-3M2pAl81MVfkO3sQbiqFQjKLiQ4)
+
    Set `ARRAYLAKE_API_TOKEN` and `ARRAYLAKE_REPO` (`<org>/<repo>`); the other setup
    values can keep their defaults.
 6. Less than 30 min later, fresh forecasts arrive in your repo. The first start pulls the
